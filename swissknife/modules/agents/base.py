@@ -30,6 +30,7 @@ class Agent(ABC):
         self.tools: List[str] = tools  # List of tool names that the agent needs
         self.system_prompt = None
         self.custom_system_prompt = None
+        self.history = []
         # Store tool definitions in the same format as ToolRegistry
         self.tool_definitions = {}  # {tool_name: (definition_func, handler_factory, service_instance)}
         self.registered_tools = (

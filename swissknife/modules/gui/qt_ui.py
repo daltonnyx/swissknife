@@ -406,6 +406,7 @@ class ChatWindow(QMainWindow, Observer):
         self.message_input.setEnabled(actual_enabled)
         self.send_button.setEnabled(actual_enabled)
         self.file_button.setEnabled(actual_enabled)
+        self.sidebar.setEnabled(actual_enabled)
 
         # Update cursor and appearance for visual feedback
         if actual_enabled:

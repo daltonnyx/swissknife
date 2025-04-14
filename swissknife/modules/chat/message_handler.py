@@ -531,6 +531,12 @@ class MessageHandler(Observable):
                     self._notify("tool_use", tool_use)
 
                     try:
+                        if tool_use["name"] == "transfer":
+                            self.agent_manager.get_current_agent().history = (
+                                MessageTransformer.standardize_messages(
+                                    self.messages, self.llm.provider_name
+                                )
+                            )
                         tool_result = self.llm.execute_tool(
                             tool_use["name"], tool_use["input"]
                         )
@@ -553,6 +559,29 @@ class MessageHandler(Observable):
                             self.agent_name = (
                                 self.agent_manager.get_current_agent().name
                             )
+                            if self.current_conversation_id:
+                                self.persistent_service.append_conversation_messages(
+                                    self.current_conversation_id,
+                                    MessageTransformer.standardize_messages(
+                                        self.messages[
+                                            self.last_assisstant_response_idx :
+                                        ],
+                                        self.llm.provider_name,
+                                    ),
+                                )
+                            self.messages = MessageTransformer.convert_messages(
+                                self.agent_manager.get_current_agent().history,
+                                self.llm.provider_name,
+                            )
+
+                            self.messages.append(
+                                {
+                                    "role": "user",
+                                    "content": [{"type": "text", "text": tool_result}],
+                                }
+                            )
+                            self.last_assisstant_response_idx = len(self.messages)
+
                             self._notify("agent_changed_by_transfer", self.agent_name)
 
                     except Exception as e:
