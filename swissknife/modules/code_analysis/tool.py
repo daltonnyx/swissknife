@@ -16,19 +16,22 @@ def get_code_analysis_tool_definition(provider="claude") -> Dict[str, Any]:
     """
     description = "Analyzes the structure of source code files within a repository, creating a structural map. This identifies key code elements, enabling code understanding and project organization insights. Explain what insights you are hoping to gain from analyzing the repository before using this tool."
 
+    tool_arguments = {
+        "path": {
+            "type": "string",
+            "description": "The root directory to analyze. Use '.' to analyze all source files in the current directory, or specify a subdirectory (e.g., 'src') to analyze files within that directory. Choose the path that will provide the most relevant information for the task at hand.",
+        }
+    }
+    tool_required = ["path"]
+
     if provider == "claude":
         return {
             "name": "analyze_repo",
             "description": description,
             "input_schema": {
                 "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "The root directory to analyze. Use '.' to analyze all source files in the current directory, or specify a subdirectory (e.g., 'src') to analyze files within that directory. Choose the path that will provide the most relevant information for the task at hand.",
-                    }
-                },
-                "required": ["path"],
+                "properties": tool_arguments,
+                "required": tool_required,
             },
         }
     else:  # provider == "openai"
@@ -39,13 +42,8 @@ def get_code_analysis_tool_definition(provider="claude") -> Dict[str, Any]:
                 "description": description,
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "The root directory to analyze. Use '.' to analyze all source files in the current directory, or specify a subdirectory (e.g., 'src') to analyze files within that directory. Choose the path that will provide the most relevant information for the task at hand.",
-                        }
-                    },
-                    "required": ["path"],
+                    "properties": tool_arguments,
+                    "required": tool_required,
                 },
             },
         }
@@ -79,9 +77,9 @@ def get_file_content_tool_definition(provider="claude"):
     Returns:
         Dict containing the tool definition
     """
-    description = "Reads the content of a code file, or a specific code element within that file (function or class body). Use this to examine the logic of specific functions, the structure of classes, or the overall content of a file. ALWAYS justify why you're reading the file and what you expect to learn from it. Before using, consider if `analyze_repo` would provide sufficient information at a higher level."
+    tool_description = "Reads the content of a code file, or a specific code element within that file (function or class body). Use this to examine the logic of specific functions, the structure of classes, or the overall content of a file. ALWAYS justify why you're reading the file and what you expect to learn from it. Before using, consider if `analyze_repo` would provide sufficient information at a higher level."
 
-    properties = {
+    tool_arguments = {
         "file_path": {
             "type": "string",
             "description": "The relative path from the current directory of the agent to the local repository file. Example: 'src/my_module.py'",
@@ -100,15 +98,16 @@ def get_file_content_tool_definition(provider="claude"):
             "description": "A dot-separated path to resolve ambiguity when multiple elements share the same name (e.g., 'ClassName.method_name'). Required only if the element name is ambiguous. Omit if unnecessary.",
         },
     }
+    tool_required = ["file_path"]
 
     if provider == "claude":
         return {
             "name": "read_file",
-            "description": description,
+            "description": tool_description,
             "input_schema": {
                 "type": "object",
-                "properties": properties,
-                "required": ["file_path"],
+                "properties": tool_arguments,
+                "required": tool_required,
             },
         }
     else:  # provider == "openai"
@@ -116,11 +115,11 @@ def get_file_content_tool_definition(provider="claude"):
             "type": "function",
             "function": {
                 "name": "read_file",
-                "description": description,
+                "description": tool_description,
                 "parameters": {
                     "type": "object",
-                    "properties": properties,
-                    "required": ["file_path"],
+                    "properties": tool_arguments,
+                    "required": tool_required,
                 },
             },
         }

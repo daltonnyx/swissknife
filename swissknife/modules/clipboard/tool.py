@@ -12,14 +12,17 @@ def get_clipboard_read_tool_definition(provider="claude") -> Dict[str, Any]:
     Returns:
         Dict containing the tool definition
     """
+    tool_description = "Reads the current content from the system clipboard. Automatically detects whether the content is text or an image. Use this to access data the user may have copied from another application. Useful when the user refers to content they've copied from another source without explicitly providing it. If the user seems to be referencing external content without providing it, consider using this tool."
+    tool_arguments = {}
+    tool_required = []
     if provider == "claude":
         return {
             "name": "clipboard_read",
-            "description": "Reads the current content from the system clipboard. Automatically detects whether the content is text or an image. Use this to access data the user may have copied from another application. Useful when the user refers to content they've copied from another source without explicitly providing it. If the user seems to be referencing external content without providing it, consider using this tool.",
+            "description": tool_description,
             "input_schema": {
                 "type": "object",
-                "properties": {},
-                "required": [],
+                "properties": tool_arguments,
+                "required": tool_required,
             },
         }
     else:  # provider == "groq"
@@ -27,11 +30,11 @@ def get_clipboard_read_tool_definition(provider="claude") -> Dict[str, Any]:
             "type": "function",
             "function": {
                 "name": "clipboard_read",
-                "description": "Reads the current content from the system clipboard. Automatically detects whether the content is text or an image. Use this to access data the user may have copied from another application. Useful when the user refers to content they've copied from another source without explicitly providing it. If the user seems to be referencing external content without providing it, consider using this tool.",
+                "description": tool_description,
                 "parameters": {
                     "type": "object",
-                    "properties": {},
-                    "required": [],
+                    "properties": tool_arguments,
+                    "required": tool_required,
                 },
             },
         }
@@ -47,19 +50,22 @@ def get_clipboard_write_tool_definition(provider="claude") -> Dict[str, Any]:
     Returns:
         Dict containing the tool definition
     """
+    tool_description = "Writes content to the system clipboard, making it accessible for pasting into other applications. Use this to provide information to the user in a readily accessible format. Always explain *why* you are writing to the clipboard and what the user should do with the copied content. For example, 'I have written the generated code snippet to your clipboard. You can now paste it into your code editor."
+    tool_arguments = {
+        "content": {
+            "type": "string",
+            "description": "The text or data to write to the clipboard. Ensure the content is properly formatted for the intended use and is clear and concise.",
+        },
+    }
+    tool_required = ["content"]
     if provider == "claude":
         return {
             "name": "clipboard_write",
-            "description": "Writes content to the system clipboard, making it accessible for pasting into other applications. Use this to provide information to the user in a readily accessible format. Always explain *why* you are writing to the clipboard and what the user should do with the copied content. For example, 'I have written the generated code snippet to your clipboard. You can now paste it into your code editor.",
+            "description": tool_description,
             "input_schema": {
                 "type": "object",
-                "properties": {
-                    "content": {
-                        "type": "string",
-                        "description": "The text or data to write to the clipboard. Ensure the content is properly formatted for the intended use and is clear and concise.",
-                    },
-                },
-                "required": ["content"],
+                "properties": tool_arguments,
+                "required": tool_required,
             },
         }
     else:  # provider == "groq"
@@ -67,16 +73,11 @@ def get_clipboard_write_tool_definition(provider="claude") -> Dict[str, Any]:
             "type": "function",
             "function": {
                 "name": "clipboard_write",
-                "description": "Writes content to the system clipboard, making it accessible for pasting into other applications. Use this to provide information to the user in a readily accessible format. Always explain *why* you are writing to the clipboard and what the user should do with the copied content. For example, 'I have written the generated code snippet to your clipboard. You can now paste it into your code editor.",
+                "description": tool_description,
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "content": {
-                            "type": "string",
-                            "description": "The text or data to write to the clipboard. Ensure the content is properly formatted for the intended use and is clear and concise.",
-                        },
-                    },
-                    "required": ["content"],
+                    "properties": tool_arguments,
+                    "required": tool_required,
                 },
             },
         }

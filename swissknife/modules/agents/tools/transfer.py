@@ -11,32 +11,40 @@ def get_transfer_tool_definition(provider="claude") -> Dict[str, Any]:
     Returns:
         The tool definition
     """
+    tool_description = "transfer to a specialized agent when the current task requires expertise beyond the current agent's capabilities. Provide a clear explanation to the user why the transfer is necessary."
+    tool_arguments = {
+        "target_agent": {
+            "type": "string",
+            "description": "The name of the specialized agent to transfer to. Refer to the ## Agents for list of available agents",
+        },
+        "task": {
+            "type": "string",
+            "description": "A precise description of the task the target agent should perform. This description MUST include the triggering keywords that prompted the transfer. Be specific and actionable.",
+        },
+        "report_back": {
+            "type": "boolean",
+            "default": "false",
+            "description": "Indicated task need to transfer back to original Agent for further processing",
+        },
+        "report_result": {
+            "type": "string",
+            "default": "",
+            "description": "When `report_back` is `true`, provide the detailed results of the completed task for the original agent. This should include comprehensive information about what was accomplished and any relevant findings.",
+        },
+        "context_summary": {
+            "type": "string",
+            "description": "A concise summary of the relevant conversation history and current state, providing essential background information for the target agent. Include key decisions, user intent, and unresolved issues.",
+        },
+    }
+    tool_required = ["target_agent", "task", "report_back"]
     if provider == "claude":
         return {
             "name": "transfer",
-            "description": "transfer to a specialized agent when the current task requires expertise beyond the current agent's capabilities. Provide a clear explanation to the user why the transfer is necessary.",
+            "description": tool_description,
             "input_schema": {
                 "type": "object",
-                "properties": {
-                    "target_agent": {
-                        "type": "string",
-                        "description": "The name of the specialized agent to transfer to. Refer to the ## Agents for list of available agents",
-                    },
-                    "task": {
-                        "type": "string",
-                        "description": "A precise description of the task the target agent should perform. This description MUST include the triggering keywords that prompted the transfer. Be specific and actionable.",
-                    },
-                    "report_back": {
-                        "type": "boolean",
-                        "default": "false",
-                        "description": "Indicated task need to transfer back to original Agent for further processing",
-                    },
-                    "context_summary": {
-                        "type": "string",
-                        "description": "A concise summary of the relevant conversation history and current state, providing essential background information for the target agent. Include key decisions, user intent, and unresolved issues.",
-                    },
-                },
-                "required": ["target_agent", "task", "report_back"],
+                "properties": tool_arguments,
+                "required": tool_required,
             },
         }
     else:
@@ -44,29 +52,11 @@ def get_transfer_tool_definition(provider="claude") -> Dict[str, Any]:
             "type": "function",
             "function": {
                 "name": "transfer",
-                "description": "transfer to a specialized agent when the current task requires expertise beyond the current agent's capabilities. Provide a clear explanation to the user why the transfer is necessary.",
+                "description": tool_description,
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "target_agent": {
-                            "type": "string",
-                            "description": "The name of the specialized agent to transfer to. Refer to the ## Agents for list of available agents",
-                        },
-                        "task": {
-                            "type": "string",
-                            "description": "A precise description of the task the target agent should perform. This description MUST include the triggering keywords that prompted the transfer. Be specific and actionable.",
-                        },
-                        "report_back": {
-                            "type": "boolean",
-                            "default": "false",
-                            "description": "Indicated task need to transfer back to original Agent for any further processing",
-                        },
-                        "context_summary": {
-                            "type": "string",
-                            "description": "A concise summary of the relevant conversation history and current state, providing essential background information for the target agent. Include key decisions, user intent, and unresolved issues.",
-                        },
-                    },
-                    "required": ["target_agent", "task", "report_back"],
+                    "properties": tool_arguments,
+                    "required": tool_required,
                 },
             },
         }
@@ -99,6 +89,7 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
         task = params.get("task")
         context_summary = params.get("context_summary", "")
         report_back = params.get("report_back", True)
+        report_result = params.get("report_result", "")
 
         if not target_agent:
             return "Error: No target agent specified"
@@ -110,15 +101,22 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
         if target_agent == "None":
             return "Error: Task is completed. This transfer is invalid"
 
+        response = ""
+
         if result["success"]:
             if (
                 report_back
                 and "transfer" in result
                 and result["transfer"]["from"] != "None"
             ):
-                return f"You are now {target_agent}. Start {task}. transfer back to {result['transfer']['from']} for further processing. Here is the summary: {context_summary}"
+                response = f"I am {result['transfer']['from']}. {task}\n\n Transfer back to {result['transfer']['from']} with detail report for further processing.\n\n Task summary: {context_summary}"
             else:
-                return f"You are now {target_agent}. Start {task}. Here is the summary: {context_summary}"
+                response = f"I am {result['transfer']['from']}. {task}\n\n Task summary: {context_summary}"
+            if report_result.strip():
+                response = response + f"\n\n Task result {report_result}"
+
+            return response
+
         else:
             available_agents = ", ".join(result.get("available_agents", []))
             return f"Error: {result.get('error')}. Available agents: {available_agents}"

@@ -3,7 +3,6 @@ from typing import List, Dict, Any, Tuple, Optional
 import traceback
 import os
 import time
-import json
 from swissknife.modules.chat.history import ChatHistoryManager, ConversationTurn
 from swissknife.modules.agents import AgentManager
 from swissknife.modules.chat.file_handler import FileHandler
@@ -151,19 +150,19 @@ class MessageHandler(Observable):
         if not user_input.startswith("/"):
             self.history_manager.add_entry(user_input)
 
-        if len(self.messages) == 0:
-            self.messages.append(
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": f"""Use user_context_summary to tailor your response:
-                            <user_context_summary>{self.persistent_service.get_user_context_json(2, 3)}</user_context_summary>""",
-                        }
-                    ],
-                }
-            )
+        # if len(self.messages) == 0:
+        #     self.messages.append(
+        #         {
+        #             "role": "user",
+        #             "content": [
+        #                 {
+        #                     "type": "text",
+        #                     "text": f"""Use user_context_summary to tailor your response:
+        #                     <user_context_summary>{self.persistent_service.get_user_context_json(2, 3)}</user_context_summary>""",
+        #                 }
+        #             ],
+        #         }
+        #     )
 
         # Handle files that were loaded but not yet sent
         if files and not self.messages:
@@ -284,7 +283,7 @@ class MessageHandler(Observable):
                 self.persistent_service.append_conversation_messages(
                     self.current_conversation_id,
                     MessageTransformer.standardize_messages(
-                        self.messages, self.llm.provider_name
+                        self.messages, self.llm.provider_name, self.agent_name
                     ),
                     True,
                 )
@@ -351,7 +350,7 @@ class MessageHandler(Observable):
                 if current_provider != model.provider:
                     # Standardize messages from current provider
                     std_messages = MessageTransformer.standardize_messages(
-                        self.messages, current_provider
+                        self.messages, current_provider, self.agent_name
                     )
                     # Convert to new provider format
                     self.messages = MessageTransformer.convert_messages(
@@ -461,18 +460,18 @@ class MessageHandler(Observable):
                     )
 
                     clean_response = assistant_response
-                    context_data, clean_response = self.llm.parse_user_context_summary(
-                        assistant_response
-                    )
-                    if context_data and not context_data_processed:
-                        # self._notify("debug_requested", context_data)
-                        self.persistent_service.store_user_context(context_data)
-                        context_data_processed = True
-                        # self.messages.append(
-                        #     self.llm.format_assistant_message(
-                        #         f"""Need to tailor response bases on this <user_context_summary>{json.dumps(context_data)}</user_context_summary>"""
-                        #     )
-                        # )
+                    # context_data, clean_response = self.llm.parse_user_context_summary(
+                    #     assistant_response
+                    # )
+                    # if context_data and not context_data_processed:
+                    #     # self._notify("debug_requested", context_data)
+                    #     self.persistent_service.store_user_context(context_data)
+                    #     context_data_processed = True
+                    #     # self.messages.append(
+                    #     #     self.llm.format_assistant_message(
+                    #     #         f"""Need to tailor response bases on this <user_context_summary>{json.dumps(context_data)}</user_context_summary>"""
+                    #     #     )
+                    #     # )
 
                     # Update token counts
                     if chunk_input_tokens > 0:
@@ -534,9 +533,22 @@ class MessageHandler(Observable):
                         if tool_use["name"] == "transfer":
                             self.agent_manager.get_current_agent().history = (
                                 MessageTransformer.standardize_messages(
-                                    self.messages, self.llm.provider_name
+                                    self.messages,
+                                    self.llm.provider_name,
+                                    self.agent_name,
                                 )
                             )
+                            if self.current_conversation_id:
+                                self.persistent_service.append_conversation_messages(
+                                    self.current_conversation_id,
+                                    MessageTransformer.standardize_messages(
+                                        self.messages[
+                                            self.last_assisstant_response_idx :
+                                        ],
+                                        self.llm.provider_name,
+                                        self.agent_name,
+                                    ),
+                                )
                         tool_result = self.llm.execute_tool(
                             tool_use["name"], tool_use["input"]
                         )
@@ -559,16 +571,6 @@ class MessageHandler(Observable):
                             self.agent_name = (
                                 self.agent_manager.get_current_agent().name
                             )
-                            if self.current_conversation_id:
-                                self.persistent_service.append_conversation_messages(
-                                    self.current_conversation_id,
-                                    MessageTransformer.standardize_messages(
-                                        self.messages[
-                                            self.last_assisstant_response_idx :
-                                        ],
-                                        self.llm.provider_name,
-                                    ),
-                                )
                             self.messages = MessageTransformer.convert_messages(
                                 self.agent_manager.get_current_agent().history,
                                 self.llm.provider_name,
@@ -655,6 +657,7 @@ class MessageHandler(Observable):
                     messages_for_this_turn = MessageTransformer.standardize_messages(
                         self.messages[self.last_assisstant_response_idx :],
                         current_provider,
+                        self.agent_name,
                     )
                     if (
                         messages_for_this_turn

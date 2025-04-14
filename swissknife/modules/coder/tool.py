@@ -14,23 +14,28 @@ def get_spec_validation_tool_definition(provider="claude") -> Dict[str, Any]:
     Returns:
         Tool definition compatible with the specified provider
     """
+    tool_description = (
+        "Run through a checklist with aider prompt and return refine suggestions"
+    )
+    tool_arguments = {
+        "prompt": {
+            "type": "string",
+            "description": "The aider prompt to be reviewed",
+        },
+        "repo_path": {
+            "type": "string",
+            "description": "The repo directory path to review aider prompt against",
+        },
+    }
+    tool_required = ["prompt", "repo_path"]
     if provider == "claude":
         return {
             "name": "review_aider_prompt",
-            "description": "Run through a checklist with aider prompt and return refine suggestions",
+            "description": tool_description,
             "input_schema": {
                 "type": "object",
-                "properties": {
-                    "prompt": {
-                        "type": "string",
-                        "description": "The aider prompt to be reviewed",
-                    },
-                    "repo_path": {
-                        "type": "string",
-                        "description": "The repo directory path to review aider prompt against",
-                    },
-                },
-                "required": ["prompt", "repo_path"],
+                "properties": tool_arguments,
+                "required": tool_required,
             },
         }
     else:
@@ -38,20 +43,11 @@ def get_spec_validation_tool_definition(provider="claude") -> Dict[str, Any]:
             "type": "function",
             "function": {
                 "name": "review_aider_prompt",
-                "description": "Run through a checklist with aider prompt and return refine suggestions",
+                "description": tool_description,
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "prompt": {
-                            "type": "string",
-                            "description": "The aider prompt to be reviewed",
-                        },
-                        "repo_path": {
-                            "type": "string",
-                            "description": "The repo directory path to review aider prompt against",
-                        },
-                    },
-                    "required": ["prompt", "repo_path"],
+                    "properties": tool_arguments,
+                    "required": tool_required,
                 },
             },
         }
@@ -96,23 +92,26 @@ def get_implement_spec_prompt_tool_definition(provider="claude") -> Dict[str, An
     Returns:
         Tool definition compatible with the specified provider
     """
+    tool_description = "NEVER run this without user request explicitly. Generate code implementation via aider using a aider prompt"
+    tool_arguments = {
+        "aider_prompt": {
+            "type": "string",
+            "description": "The Aider prompt that instructs Aider to implement",
+        },
+        "repo_path": {
+            "type": "string",
+            "description": "The repository path where code should be implemented",
+        },
+    }
+    tool_required = ["aider_prompt", "repo_path"]
     if provider == "claude":
         return {
             "name": "implement_aider_prompt",
-            "description": "NEVER run this without user request explicitly. Generate code implementation via aider using a aider prompt",
+            "description": tool_description,
             "input_schema": {
                 "type": "object",
-                "properties": {
-                    "aider_prompt": {
-                        "type": "string",
-                        "description": "The Aider prompt that instructs Aider to implement",
-                    },
-                    "repo_path": {
-                        "type": "string",
-                        "description": "The repository path where code should be implemented",
-                    },
-                },
-                "required": ["aider_prompt", "repo_path"],
+                "properties": tool_arguments,
+                "required": tool_required,
             },
         }
     else:
@@ -120,20 +119,11 @@ def get_implement_spec_prompt_tool_definition(provider="claude") -> Dict[str, An
             "type": "function",
             "function": {
                 "name": "implement_aider_prompt",
-                "description": "NEVER run this without user request explicitly. Generate code implementation via aider using a aider prompt",
+                "description": tool_description,
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "aider_prompt": {
-                            "type": "string",
-                            "description": "The Aider prompt that instructs Aider to implement",
-                        },
-                        "repo_path": {
-                            "type": "string",
-                            "description": "The repository path where code should be implemented",
-                        },
-                    },
-                    "required": ["aider_prompt", "repo_path"],
+                    "properties": tool_arguments,
+                    "required": tool_required,
                 },
             },
         }

@@ -3,32 +3,35 @@ from swissknife.modules.web_search.service import TavilySearchService
 
 def get_web_search_tool_definition(provider="claude"):
     """Return the tool definition for web search based on provider."""
+    tool_description = "Searches the web for up-to-date information on a specific topic or query. Use this to gather current information, verify facts, or explore the latest developments. Summarize your findings *before* presenting them to the user. If the user is seeking information that is likely to have changed recently, this is the tool to use."
+    tool_arguments = {
+        "query": {
+            "type": "string",
+            "description": "The search query to use for web search. Use precise and specific keywords to get the most relevant results. Include any relevant context to improve search accuracy.",
+        },
+        "search_depth": {
+            "type": "string",
+            "enum": ["basic", "advanced"],
+            "description": "The depth of the search to perform. 'basic' is faster and suitable for general information. 'advanced' is more thorough and suitable for complex or nuanced queries. Start with 'basic' and only use 'advanced' if initial results are insufficient.",
+            "default": "basic",
+        },
+        "max_results": {
+            "type": "integer",
+            "description": "The maximum number of search results to return. A higher number allows for broader coverage but may include less relevant results. (Range: 1-10)",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 20,
+        },
+    }
+    tool_required = ["query"]
     if provider == "claude":
         return {
             "name": "web_search",
-            "description": "Searches the web for up-to-date information on a specific topic or query. Use this to gather current information, verify facts, or explore the latest developments. Summarize your findings *before* presenting them to the user. If the user is seeking information that is likely to have changed recently, this is the tool to use.",
+            "description": tool_description,
             "input_schema": {
                 "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query to use for web search. Use precise and specific keywords to get the most relevant results. Include any relevant context to improve search accuracy.",
-                    },
-                    "search_depth": {
-                        "type": "string",
-                        "enum": ["basic", "advanced"],
-                        "description": "The depth of the search to perform. 'basic' is faster and suitable for general information. 'advanced' is more thorough and suitable for complex or nuanced queries. Start with 'basic' and only use 'advanced' if initial results are insufficient.",
-                        "default": "basic",
-                    },
-                    "max_results": {
-                        "type": "integer",
-                        "description": "The maximum number of search results to return. A higher number allows for broader coverage but may include less relevant results. (Range: 1-10)",
-                        "default": 10,
-                        "minimum": 1,
-                        "maximum": 20,
-                    },
-                },
-                "required": ["query"],
+                "properties": tool_arguments,
+                "required": tool_required,
             },
         }
     else:  # provider == "groq"
@@ -36,29 +39,11 @@ def get_web_search_tool_definition(provider="claude"):
             "type": "function",
             "function": {
                 "name": "web_search",
-                "description": "Searches the web for up-to-date information on a specific topic or query. Use this to gather current information, verify facts, or explore the latest developments. Summarize your findings *before* presenting them to the user. If the user is seeking information that is likely to have changed recently, this is the tool to use.",
+                "description": tool_description,
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "The search query to use for web search. Use precise and specific keywords to get the most relevant results. Include any relevant context to improve search accuracy.",
-                        },
-                        "search_depth": {
-                            "type": "string",
-                            "enum": ["basic", "advanced"],
-                            "description": "The depth of the search to perform. 'basic' is faster and suitable for general information. 'advanced' is more thorough and suitable for complex or nuanced queries. Start with 'basic' and only use 'advanced' if initial results are insufficient.",
-                            "default": "basic",
-                        },
-                        "max_results": {
-                            "type": "integer",
-                            "description": "The maximum number of search results to return. A higher number allows for broader coverage but may include less relevant results. (Range: 1-10)",
-                            "default": 10,
-                            "minimum": 1,
-                            "maximum": 20,
-                        },
-                    },
-                    "required": ["query"],
+                    "properties": tool_arguments,
+                    "required": tool_required,
                 },
             },
         }
@@ -66,19 +51,22 @@ def get_web_search_tool_definition(provider="claude"):
 
 def get_web_extract_tool_definition(provider="claude"):
     """Return the tool definition for web content extraction based on provider."""
+    tool_description = "Retrieves the content from a web page specified by its URL. Use this to access information, documentation, or data available on the web *after* finding the URL using `web_search` or other means. Only use HTTP/HTTPS URLs. DO NOT use this tool to access local project files. Summarize the content of the webpage before presenting it to the user. Prioritize extracting information relevant to the user's current request."
+    tool_arguments = {
+        "url": {
+            "type": "string",
+            "description": "The complete HTTP or HTTPS web address to retrieve content from (e.g., 'https://example.com/page'). Ensure the URL is valid and accessible. Verify the URL's relevance to the user's request before fetching.",
+        }
+    }
+    tool_required = ["url"]
     if provider == "claude":
         return {
             "name": "fetch_webpage",
-            "description": "Retrieves the content from a web page specified by its URL. Use this to access information, documentation, or data available on the web *after* finding the URL using `web_search` or other means. Only use HTTP/HTTPS URLs. DO NOT use this tool to access local project files. Summarize the content of the webpage before presenting it to the user. Prioritize extracting information relevant to the user's current request.",
+            "description": tool_description,
             "input_schema": {
                 "type": "object",
-                "properties": {
-                    "url": {
-                        "type": "string",
-                        "description": "The complete HTTP or HTTPS web address to retrieve content from (e.g., 'https://example.com/page'). Ensure the URL is valid and accessible. Verify the URL's relevance to the user's request before fetching.",
-                    }
-                },
-                "required": ["url"],
+                "properties": tool_arguments,
+                "required": tool_required,
             },
         }
     else:  # provider == "groq"
@@ -86,16 +74,11 @@ def get_web_extract_tool_definition(provider="claude"):
             "type": "function",
             "function": {
                 "name": "fetch_webpage",
-                "description": "Retrieves the content from a web page specified by its URL. Use this to access information, documentation, or data available on the web *after* finding the URL using `web_search` or other means. Only use HTTP/HTTPS URLs. DO NOT use this tool to access local project files. Summarize the content of the webpage before presenting it to the user. Prioritize extracting information relevant to the user's current request.",
+                "description": tool_description,
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "url": {
-                            "type": "string",
-                            "description": "The complete HTTP or HTTPS web address to retrieve content from (e.g., 'https://example.com/page'). Ensure the URL is valid and accessible. Verify the URL's relevance to the user's request before fetching.",
-                        }
-                    },
-                    "required": ["url"],
+                    "properties": tool_arguments,
+                    "required": tool_required,
                 },
             },
         }

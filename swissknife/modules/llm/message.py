@@ -9,7 +9,7 @@ class MessageTransformer:
 
     @staticmethod
     def standardize_messages(
-        messages: List[Dict[str, Any]], source_provider: str
+        messages: List[Dict[str, Any]], source_provider: str, agent: str
     ) -> List[Dict[str, Any]]:
         """
         Convert provider-specific messages to a standard format.
@@ -22,13 +22,13 @@ class MessageTransformer:
             Standardized messages
         """
         if source_provider == "claude":
-            return MessageTransformer._standardize_claude_messages(messages)
+            return MessageTransformer._standardize_claude_messages(messages, agent)
         elif source_provider == "openai" or source_provider == "deepinfra":
-            return MessageTransformer._standardize_openai_messages(messages)
+            return MessageTransformer._standardize_openai_messages(messages, agent)
         elif source_provider == "google":
-            return MessageTransformer._standardize_google_messages(messages)
+            return MessageTransformer._standardize_google_messages(messages, agent)
         elif source_provider == "groq":
-            return MessageTransformer._standardize_groq_messages(messages)
+            return MessageTransformer._standardize_groq_messages(messages, agent)
         return messages
 
     @staticmethod
@@ -57,12 +57,13 @@ class MessageTransformer:
 
     @staticmethod
     def _standardize_claude_messages(
-        messages: List[Dict[str, Any]],
+        messages: List[Dict[str, Any]], agent: str
     ) -> List[Dict[str, Any]]:
         """Convert Claude-specific messages to standard format."""
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
+            std_msg["agent"] = agent
 
             # Handle content based on type
             content = msg.get("content", [])
@@ -195,12 +196,13 @@ class MessageTransformer:
 
     @staticmethod
     def _standardize_openai_messages(
-        messages: List[Dict[str, Any]],
+        messages: List[Dict[str, Any]], agent: str
     ) -> List[Dict[str, Any]]:
         """Convert OpenAI-specific messages to standard format."""
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
+            std_msg["agent"] = "agent"
 
             # Handle content
             if "content" in msg:
@@ -233,12 +235,13 @@ class MessageTransformer:
 
     @staticmethod
     def _standardize_google_messages(
-        messages: List[Dict[str, Any]],
+        messages: List[Dict[str, Any]], agent: str
     ) -> List[Dict[str, Any]]:
         """Convert OpenAI-specific messages to standard format."""
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
+            std_msg["agent"] = agent
 
             # Handle content
             if "content" in msg:
@@ -279,13 +282,14 @@ class MessageTransformer:
 
     @staticmethod
     def _standardize_groq_messages(
-        messages: List[Dict[str, Any]],
+        messages: List[Dict[str, Any]], agent: str
     ) -> List[Dict[str, Any]]:
         """Convert Groq-specific messages to standard format."""
         # Groq uses OpenAI format, so we can reuse that
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
+            std_msg["agent"] = agent
 
             # Handle content
             if "content" in msg:

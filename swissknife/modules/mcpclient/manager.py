@@ -87,9 +87,9 @@ class MCPSessionManager:
             print(f"Error connecting to server '{server_id}': {str(e)}")
             return False
 
-    async def cleanup(self):
+    def cleanup(self):
         """Clean up all resources."""
         if self.initialized:
             self.mcp_service._run_async(self.mcp_service.cleanup())
-            self.mcp_service.stop()
+            # self.mcp_service.stop()
             self.initialized = False

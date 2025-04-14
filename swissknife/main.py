@@ -281,9 +281,12 @@ def discover_and_register_tools(services=None):
     "--agent-config", default=None, help="Path to the agent configuration file."
 )
 @click.option(
-    "--gui", is_flag=True, default=True, help="Use GUI interface instead of console"
+    "--console",
+    is_flag=True,
+    default=False,
+    help="Use GUI interface instead of console",
 )
-def chat(message, files, provider, agent_config, gui):
+def chat(message, files, provider, agent_config, console):
     """Start an interactive chat session with LLM"""
     try:
         if os.getenv("ANTHROPIC_API_KEY"):
@@ -311,7 +314,7 @@ def chat(message, files, provider, agent_config, gui):
         )
 
         # Choose between GUI and console based on the --gui flag
-        if gui:
+        if not console:
             app = QApplication(sys.argv)
             chat_window = ChatWindow(message_handler)
             chat_window.show()
@@ -319,6 +322,10 @@ def chat(message, files, provider, agent_config, gui):
         else:
             ui = ConsoleUI(message_handler)
             ui.start()
+    except SystemExit as e:
+        from swissknife.modules.mcpclient import MCPSessionManager
+
+        MCPSessionManager.get_instance().cleanup()
     except Exception as e:
         print(traceback.format_exc())
         click.echo(f"❌ Error: {str(e)}", err=True)

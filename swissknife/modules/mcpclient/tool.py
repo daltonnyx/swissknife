@@ -1,6 +1,6 @@
 import json
 from typing import Dict, Any
-from .manager import MCPSessionManager
+from swissknife.modules.mcpclient import MCPSessionManager
 
 
 def get_mcp_connect_tool_definition():
@@ -273,7 +273,7 @@ def get_mcp_disconnect_tool_handler():
             }
         else:
             # Disconnect from all servers
-            await manager.cleanup()
+            manager.cleanup()
 
             return {"content": "Disconnected from all MCP servers", "status": "success"}
 

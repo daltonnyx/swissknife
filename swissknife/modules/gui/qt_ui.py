@@ -592,7 +592,7 @@ class ChatWindow(QMainWindow, Observer):
             self.chat_scroll.verticalScrollBar().maximum()
         )
 
-    def append_message(self, text, is_user=True, message_index=None):
+    def append_message(self, text, is_user=True, message_index=None, agent_name=None):
         """Adds a message bubble to the chat container."""
         # Create container for message alignment
         container = QWidget()
@@ -600,7 +600,13 @@ class ChatWindow(QMainWindow, Observer):
         container_layout.setContentsMargins(0, 0, 0, 0)
 
         # Create the message bubble with agent name for non-user messages
-        agent_name = self.message_handler.agent_name if not is_user else "YOU"
+        agent_name = (
+            agent_name
+            if agent_name
+            else self.message_handler.agent_name
+            if not is_user
+            else "YOU"
+        )
 
         message_bubble = MessageBubble(
             text, is_user, agent_name, message_index=message_index
@@ -1016,7 +1022,10 @@ class ChatWindow(QMainWindow, Observer):
                     )
                 ):
                     self.append_message(
-                        message_content, is_user, msg_idx if is_user else None
+                        message_content,
+                        is_user,
+                        msg_idx if is_user else None,
+                        msg.get("agent", None),
                     )
                 # Add handling for other potential content formats if necessary
             msg_idx += 1
