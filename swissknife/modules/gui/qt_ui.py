@@ -58,6 +58,7 @@ class ChatWindow(QMainWindow, Observer):
         super().__init__()
         self.setWindowTitle("Interactive Chat")
         self.setGeometry(100, 100, 1000, 700)  # Adjust size for sidebar
+        self.setAttribute(Qt.WidgetAttribute.WA_InputMethodEnabled)
 
         # Set application-wide style
         self.setStyleSheet(
@@ -1280,6 +1281,14 @@ class ChatWindow(QMainWindow, Observer):
             debug_info = json.dumps(self.message_handler.messages, indent=2)
         except Exception as e:
             debug_info = str(self.message_handler.messages)
+        # Add as a system message
+        self.add_system_message(f"DEBUG INFO:\n\n```json\n{debug_info}\n```")
+
+        try:
+            # Format the messages for display
+            debug_info = json.dumps(self.message_handler.streamline_messages, indent=2)
+        except Exception as e:
+            debug_info = str(self.message_handler.streamline_messages)
         # Add as a system message
         self.add_system_message(f"DEBUG INFO:\n\n```json\n{debug_info}\n```")
 

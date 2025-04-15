@@ -88,13 +88,13 @@ class ModelRegistry:
                 output_token_price_1m=10.0,
             ),
             Model(
-                id="gpt-4o-mini",
+                id="gpt-4.1",
                 provider="openai",
-                name="GPT-4o Mini",
-                description="Fast, affordable small model for focused tasks",
+                name="GPT-4.1",
+                description="Flagship model for complex tasks. It is well suited for problem solving across domains",
                 capabilities=["tool_use", "vision"],
-                input_token_price_1m=0.15,
-                output_token_price_1m=0.6,
+                input_token_price_1m=2,
+                output_token_price_1m=8,
                 default=True,
             ),
             Model(

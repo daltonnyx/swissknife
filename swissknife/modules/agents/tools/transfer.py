@@ -11,7 +11,7 @@ def get_transfer_tool_definition(provider="claude") -> Dict[str, Any]:
     Returns:
         The tool definition
     """
-    tool_description = "transfer to a specialized agent when the current task requires expertise beyond the current agent's capabilities. Provide a clear explanation to the user why the transfer is necessary."
+    tool_description = "transfer to a specialized agent when the current task requires expertise beyond the current agent's capabilities. Provide a clear explanation to the user why the transfer is necessary. IMPORTANT: transfered agent cannot see your conversation with user"
     tool_arguments = {
         "target_agent": {
             "type": "string",
@@ -20,6 +20,11 @@ def get_transfer_tool_definition(provider="claude") -> Dict[str, Any]:
         "task": {
             "type": "string",
             "description": "A precise description of the task the target agent should perform. This description MUST include the triggering keywords that prompted the transfer. Be specific and actionable.",
+        },
+        "keywords": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "keywords for transfered agent retrieving relevant context from memory",
         },
         "report_back": {
             "type": "boolean",
@@ -31,12 +36,8 @@ def get_transfer_tool_definition(provider="claude") -> Dict[str, Any]:
             "default": "",
             "description": "When `report_back` is `true`, provide the detailed results of the completed task for the original agent. This should include comprehensive information about what was accomplished and any relevant findings.",
         },
-        "context_summary": {
-            "type": "string",
-            "description": "A concise summary of the relevant conversation history and current state, providing essential background information for the target agent. Include key decisions, user intent, and unresolved issues.",
-        },
     }
-    tool_required = ["target_agent", "task", "report_back"]
+    tool_required = ["target_agent", "task", "keywords"]
     if provider == "claude":
         return {
             "name": "transfer",
@@ -87,7 +88,7 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
         """
         target_agent = params.get("target_agent")
         task = params.get("task")
-        context_summary = params.get("context_summary", "")
+        keywords = params.get("keywords", [])
         report_back = params.get("report_back", True)
         report_result = params.get("report_result", "")
 
@@ -96,6 +97,17 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
 
         if not task:
             return "Error: No task specified for the transfer"
+
+        context_summary = ""
+
+        if agent_manager.current_conversation_id:
+            from swissknife.modules.memory import MemoryService
+
+            memory = MemoryService()
+            context_summary = memory.retrieve_message_markdown(
+                keywords, agent_manager.current_conversation_id
+            )
+            context_summary += "\n\n---\n\n"
 
         result = agent_manager.perform_transfer(target_agent, task, context_summary)
         if target_agent == "None":
@@ -109,9 +121,9 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
                 and "transfer" in result
                 and result["transfer"]["from"] != "None"
             ):
-                response = f"I am {result['transfer']['from']}. {task}\n\n Transfer back to {result['transfer']['from']} with detail report for further processing.\n\n Task summary: {context_summary}"
+                response = f"{task}\n\nTransfer back to {result['transfer']['from']} with detail report for further processing.\n\nContext summary: {context_summary}"
             else:
-                response = f"I am {result['transfer']['from']}. {task}\n\n Task summary: {context_summary}"
+                response = f"{task}\n\nContext summary: {context_summary}"
             if report_result.strip():
                 response = response + f"\n\n Task result {report_result}"
 

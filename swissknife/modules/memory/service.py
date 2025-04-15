@@ -2,6 +2,7 @@ import os
 import chromadb
 import datetime
 import uuid
+import json
 from typing import List, Dict, Any
 
 
@@ -25,6 +26,9 @@ class MemoryService:
 
         # Create or get collection for storing memories
         self.collection = self.client.get_or_create_collection(name=collection_name)
+        self.message_raw_collection = self.client.get_or_create_collection(
+            name="message_raw"
+        )
 
         # Configuration for chunking
         self.chunk_size = 200  # words per chunk
@@ -69,7 +73,7 @@ class MemoryService:
             List of memory IDs created
         """
         # Create the memory document by combining user message and response
-        conversation_text = f"Date: {datetime.datetime.today().strftime('%Y-%m-%d')} User: {user_message}\nAssistant: {assistant_response}"
+        conversation_text = f"Date: {datetime.datetime.today().strftime('%Y-%m-%d')}.\n\n User: {user_message}.\n\nAssistant: {assistant_response}"
 
         # Split into chunks
         chunks = self._create_chunks(conversation_text)
@@ -100,6 +104,100 @@ class MemoryService:
             )
 
         return memory_ids
+
+    def store_message_markdown(
+        self, message: Dict[str, Any], conversation_id: str
+    ) -> str:
+        """
+        Store a raw message (user or assistant) as a markdown document in the memory database.
+
+        Args:
+            message: The message dictionary to store.
+            conversation_id: The conversation ID to associate with this message.
+
+        Returns:
+            The memory ID created.
+        """
+        # Standardize the message format
+        std_msg = {"role": message.get("role", "")}
+        std_msg["agent"] = message.get("agent", "")
+
+        # Handle content
+        if "content" in message:
+            if (
+                isinstance(message["content"], str)
+                and message.get("role", "") == "assistant"
+            ):
+                std_msg["content"] = [{"type": "text", "text": message["content"]}]
+
+            else:
+                std_msg["content"] = message["content"]
+
+        # Handle tool calls
+        if "tool_calls" in message:
+            std_msg["tool_calls"] = []
+            for tool_call in message["tool_calls"]:
+                std_tool_call = {
+                    "id": tool_call.get("id"),
+                    "name": tool_call.get("function", {}).get("name"),
+                    "arguments": json.loads(
+                        tool_call.get("function", {}).get("arguments")
+                    ),
+                    "type": tool_call.get("type", "function"),
+                }
+                std_msg["tool_calls"].append(std_tool_call)
+
+        # Handle tool results
+        if message.get("role") == "tool":
+            std_msg["tool_result"] = {
+                "tool_use_id": message.get("tool_call_id"),
+                "content": message.get("content"),
+                "is_error": message.get("content", "").startswith("ERROR:"),
+            }
+
+        # Format as a markdown document
+        md_lines = [f"**Role:** {std_msg['role']}  "]
+        if std_msg["role"] == "assistant":
+            md_lines.append(f"**Agent:** {std_msg.get('agent', '')}  ")
+
+        if "content" in std_msg:
+            md_lines.append(f"**Content:**\n\n{std_msg['content']}\n")
+
+        if "tool_calls" in std_msg:
+            md_lines.append("**Tool Calls:**")
+            for tool_call in std_msg["tool_calls"]:
+                md_lines.append(f"- **ID:** {tool_call.get('id', '')}")
+                md_lines.append(f"  - **Name:** {tool_call.get('name', '')}")
+                md_lines.append(f"  - **Type:** {tool_call.get('type', '')}")
+                md_lines.append(f"  - **Arguments:**\n")
+                md_lines.append(
+                    f"    ```json\n{json.dumps(tool_call.get('arguments', {}), indent=2, ensure_ascii=False)}\n    ```"
+                )
+
+        if "tool_result" in std_msg:
+            tool_result = std_msg["tool_result"]
+            md_lines.append("**Tool Result:**")
+            md_lines.append(f"- **Tool Use ID:** {tool_result.get('tool_use_id', '')}")
+            md_lines.append(f"- **Content:**\n\n{tool_result.get('content', '')}")
+            md_lines.append(f"- **Is Error:** {tool_result.get('is_error', False)}")
+
+        markdown_doc = "\n".join(md_lines)
+
+        memory_id = str(uuid.uuid4())
+        timestamp = datetime.datetime.now().isoformat()
+
+        self.message_raw_collection.add(
+            documents=[markdown_doc],
+            metadatas=[
+                {
+                    "timestamp": timestamp,
+                    "conversation_id": conversation_id,
+                    "type": "message_markdown",
+                }
+            ],
+            ids=[memory_id],
+        )
+        return memory_id
 
     def retrieve_memory(self, keywords: str, limit: int = 5) -> str:
         """
@@ -251,3 +349,39 @@ class MemoryService:
                 "message": f"Error forgetting topic: {str(e)}",
                 "count": 0,
             }
+
+    def retrieve_message_markdown(
+        self, keywords: List[str], conversation_id: str
+    ) -> str:  # Changed return type hint to str
+        """
+        Retrieve up to 3 most relevant markdown messages from message_raw_collection
+        for a given conversation_id, filtered by keywords, and return them as a
+        single markdown formatted string.
+
+        Args:
+            conversation_id: The conversation ID to filter messages.
+            keywords: List of keywords to search for relevance.
+
+        Returns:
+            A single markdown string containing the retrieved messages, separated by
+            a horizontal rule, or a message indicating none were found.
+        """
+        # Query the message_raw_collection
+        results = self.message_raw_collection.query(
+            query_texts=keywords,  # Use the joined query string
+            n_results=3,  # Directly request only 3 results
+            where={"conversation_id": conversation_id},
+        )
+
+        if not results["documents"] or not results["documents"][0]:
+            return "No relevant messages found for this conversation and keywords."
+
+        # Extract documents if available
+        docs = results.get("documents", [[]])[0]
+
+        # Format the output as a single markdown string
+        if not docs:
+            return "No relevant messages found for this conversation and keywords."
+        else:
+            # Join the markdown documents with a separator
+            return "\n\n---\n\n".join(docs)

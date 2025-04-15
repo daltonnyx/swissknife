@@ -23,11 +23,11 @@ class MessageTransformer:
         """
         if source_provider == "claude":
             return MessageTransformer._standardize_claude_messages(messages, agent)
-        elif source_provider == "openai" or source_provider == "deepinfra":
+        elif source_provider == "openai":
             return MessageTransformer._standardize_openai_messages(messages, agent)
         elif source_provider == "google":
             return MessageTransformer._standardize_google_messages(messages, agent)
-        elif source_provider == "groq":
+        elif source_provider == "groq" or source_provider == "deepinfra":
             return MessageTransformer._standardize_groq_messages(messages, agent)
         return messages
 
@@ -47,11 +47,11 @@ class MessageTransformer:
         """
         if target_provider == "claude":
             return MessageTransformer._convert_to_claude_format(messages)
-        elif target_provider == "openai" or target_provider == "deepinfra":
+        elif target_provider == "openai":
             return MessageTransformer._convert_to_openai_format(messages)
         elif target_provider == "google":
             return MessageTransformer._convert_to_google_format(messages)
-        elif target_provider == "groq":
+        elif target_provider == "groq" or target_provider == "deepinfra":
             return MessageTransformer._convert_to_groq_format(messages)
         return messages
 
@@ -63,7 +63,8 @@ class MessageTransformer:
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
-            std_msg["agent"] = agent
+            if msg.get("role", "") == "assistant":
+                std_msg["agent"] = agent
 
             # Handle content based on type
             content = msg.get("content", [])
@@ -202,7 +203,8 @@ class MessageTransformer:
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
-            std_msg["agent"] = "agent"
+            if msg.get("role", "") == "assistant":
+                std_msg["agent"] = agent
 
             # Handle content
             if "content" in msg:
@@ -241,7 +243,8 @@ class MessageTransformer:
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
-            std_msg["agent"] = agent
+            if msg.get("role", "") == "assistant":
+                std_msg["agent"] = agent
 
             # Handle content
             if "content" in msg:
@@ -289,7 +292,8 @@ class MessageTransformer:
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
-            std_msg["agent"] = agent
+            if msg.get("role", "") == "assistant":
+                std_msg["agent"] = agent
 
             # Handle content
             if "content" in msg:

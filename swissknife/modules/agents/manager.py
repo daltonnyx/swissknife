@@ -52,6 +52,7 @@ class AgentManager:
             self.current_agent = None
             self.transfer_history = []
             self._initialized = True
+            self.current_conversation_id: Optional[str] = None
 
     @classmethod
     def get_instance(cls):
