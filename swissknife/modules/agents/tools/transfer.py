@@ -105,7 +105,7 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
 
             memory = MemoryService()
             context_summary = memory.retrieve_message_markdown(
-                keywords, agent_manager.current_conversation_id
+                keywords, agent_manager.current_conversation_id, target_agent
             )
             context_summary += "\n\n---\n\n"
 
@@ -126,6 +126,8 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
                 response = f"{task}\n\nContext summary: {context_summary}"
             if report_result.strip():
                 response = response + f"\n\n Task result {report_result}"
+
+            response += f"\n\nSearch memory using these keywords if need more context: {', '.join(keywords)}"
 
             return response
 

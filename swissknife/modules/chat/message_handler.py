@@ -313,7 +313,7 @@ class MessageHandler(Observable):
                 [
                     msg
                     for msg in self.streamline_messages
-                    if msg["agent"] == self.agent_name
+                    if msg["role"] != "assistant" or msg["agent"] == self.agent_name
                 ],
                 self.llm.provider_name,
             )

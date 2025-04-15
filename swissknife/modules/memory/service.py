@@ -118,54 +118,20 @@ class MemoryService:
         Returns:
             The memory ID created.
         """
-        # Standardize the message format
-        std_msg = {"role": message.get("role", "")}
-        std_msg["agent"] = message.get("agent", "")
-
-        # Handle content
-        if "content" in message:
-            if (
-                isinstance(message["content"], str)
-                and message.get("role", "") == "assistant"
-            ):
-                std_msg["content"] = [{"type": "text", "text": message["content"]}]
-
-            else:
-                std_msg["content"] = message["content"]
-
-        # Handle tool calls
-        if "tool_calls" in message:
-            std_msg["tool_calls"] = []
-            for tool_call in message["tool_calls"]:
-                std_tool_call = {
-                    "id": tool_call.get("id"),
-                    "name": tool_call.get("function", {}).get("name"),
-                    "arguments": json.loads(
-                        tool_call.get("function", {}).get("arguments")
-                    ),
-                    "type": tool_call.get("type", "function"),
-                }
-                std_msg["tool_calls"].append(std_tool_call)
-
-        # Handle tool results
-        if message.get("role") == "tool":
-            std_msg["tool_result"] = {
-                "tool_use_id": message.get("tool_call_id"),
-                "content": message.get("content"),
-                "is_error": message.get("content", "").startswith("ERROR:"),
-            }
 
         # Format as a markdown document
-        md_lines = [f"**Role:** {std_msg['role']}  "]
-        if std_msg["role"] == "assistant":
-            md_lines.append(f"**Agent:** {std_msg.get('agent', '')}  ")
+        md_lines = [f"**Role:** {message['role']}  "]
+        if message["role"] == "assistant":
+            md_lines.append(f"**Agent:** {message.get('agent', '')}  ")
 
-        if "content" in std_msg:
-            md_lines.append(f"**Content:**\n\n{std_msg['content']}\n")
+        if "content" in message:
+            if isinstance(message["content"], List) and message["content"]:
+                message["content"] = message["content"][0]["text"]
+            md_lines.append(f"**Content:**\n\n{message['content']}\n")
 
-        if "tool_calls" in std_msg:
+        if "tool_calls" in message:
             md_lines.append("**Tool Calls:**")
-            for tool_call in std_msg["tool_calls"]:
+            for tool_call in message["tool_calls"]:
                 md_lines.append(f"- **ID:** {tool_call.get('id', '')}")
                 md_lines.append(f"  - **Name:** {tool_call.get('name', '')}")
                 md_lines.append(f"  - **Type:** {tool_call.get('type', '')}")
@@ -174,8 +140,8 @@ class MemoryService:
                     f"    ```json\n{json.dumps(tool_call.get('arguments', {}), indent=2, ensure_ascii=False)}\n    ```"
                 )
 
-        if "tool_result" in std_msg:
-            tool_result = std_msg["tool_result"]
+        if "tool_result" in message:
+            tool_result = message["tool_result"]
             md_lines.append("**Tool Result:**")
             md_lines.append(f"- **Tool Use ID:** {tool_result.get('tool_use_id', '')}")
             md_lines.append(f"- **Content:**\n\n{tool_result.get('content', '')}")
@@ -192,6 +158,7 @@ class MemoryService:
                 {
                     "timestamp": timestamp,
                     "conversation_id": conversation_id,
+                    "origin": message.get("agent", "user"),
                     "type": "message_markdown",
                 }
             ],
@@ -351,7 +318,7 @@ class MemoryService:
             }
 
     def retrieve_message_markdown(
-        self, keywords: List[str], conversation_id: str
+        self, keywords: List[str], conversation_id: str, from_agent: str
     ) -> str:  # Changed return type hint to str
         """
         Retrieve up to 3 most relevant markdown messages from message_raw_collection
@@ -368,9 +335,14 @@ class MemoryService:
         """
         # Query the message_raw_collection
         results = self.message_raw_collection.query(
-            query_texts=keywords,  # Use the joined query string
-            n_results=3,  # Directly request only 3 results
-            where={"conversation_id": conversation_id},
+            query_texts=keywords,
+            n_results=4,
+            where={
+                "$and": [
+                    {"conversation_id": conversation_id},
+                    {"origin": {"$ne": from_agent}},
+                ]
+            },
         )
 
         if not results["documents"] or not results["documents"][0]:
