@@ -100,6 +100,12 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
 
         context_summary = ""
 
+        result = agent_manager.perform_transfer(target_agent, task, context_summary)
+        if target_agent == "None":
+            return "Error: Task is completed. This transfer is invalid"
+
+        response = ""
+
         if agent_manager.current_conversation_id:
             from swissknife.modules.memory import MemoryService
 
@@ -109,12 +115,6 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
             )
             context_summary += "\n\n---\n\n"
 
-        result = agent_manager.perform_transfer(target_agent, task, context_summary)
-        if target_agent == "None":
-            return "Error: Task is completed. This transfer is invalid"
-
-        response = ""
-
         if result["success"]:
             if (
                 report_back
@@ -123,7 +123,7 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
             ):
                 response = f"{task}\n\nTransfer back to {result['transfer']['from']} with detail report for further processing.\n\nContext summary: {context_summary}"
             else:
-                response = f"{task}\n\nContext summary: {context_summary}"
+                response = f"{task}\n\nContext summary: \n\n{context_summary}"
             if report_result.strip():
                 response = response + f"\n\n Task result {report_result}"
 
