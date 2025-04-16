@@ -116,6 +116,13 @@ class AgentManager:
     def clean_agents_messages(self):
         for key, agent in self.agents.items():
             agent.history = []
+            agent.shared_context_pool = {}
+
+    def rebuild_agents_messages(self, streamline_messages):
+        self.clean_agents_messages()
+        for msg in streamline_messages:
+            if msg.get("agent", "") in self.agents:
+                self.agents[msg.get("agent")].history.append(msg)
 
     def get_current_agent(self) -> Agent:
         """
@@ -153,6 +160,8 @@ class AgentManager:
 
         relevant_data = []
         if source_agent:
+            if target_agent_name not in source_agent.shared_context_pool:
+                source_agent.shared_context_pool[target_agent_name] = []
             for i, msg in enumerate(source_agent.history):
                 if (
                     i in relevant_messages
@@ -185,6 +194,9 @@ class AgentManager:
             "reason": task,
             "relevant_data": relevant_data,
         }
+        # Set the new current agent
+        self.select_agent(target_agent_name)
+
         self.transfer_history.append(transfer_record)
 
         return {"success": True, "transfer": transfer_record}

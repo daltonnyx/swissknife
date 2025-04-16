@@ -72,19 +72,7 @@ swissknife chat
 ### Start an Interactive Chat with TUI
 
 ```bash
-swissknife chat --gui false
-```
-
-### Start a Chat with an Initial Message
-
-```bash
-swissknife chat --message "Hello, I need help with software architecture"
-```
-
-### Include Files in Your Chat
-
-```bash
-swissknife chat --agent-config ./examples/agents/agents.toml --files document.pdf --files code.py
+swissknife chat --console
 ```
 
 ### Start a Chat with Different Providers
@@ -152,12 +140,31 @@ The intelligent transfer system allows seamless transitions between specialized
 agents:
 
 1. The current agent identifies when a different expertise is required.
-2. A transfer request is initiated with context preservation.
+2. A transfer request is initiated with sharing context Mechanism.
 3. The appropriate specialized agent is activated.
 4. Conversation continues with maintained context but specialized capabilities.
 
-```
-[Current Agent] --> [Transfer Request] --> [New Agent with Context]
+```mermaid
+sequenceDiagram
+    participant agentA as Agent A
+    participant agentManager as AgentManager
+    participant agentB as Agent B
+
+    Note over agentA: Has its own separate message history
+    Note over agentB: Has its own separate message history
+
+    agentA->>agentManager: Calls transfer(target_agent=Agent B, task, relevant_messages)
+    activate agentManager
+    Note over agentManager: Uses 'relevant_messages' indices to select messages from Agent A's history
+
+    agentManager->>agentManager: Prepare new context (system prompt + selected messages from Agent A)
+    agentManager->>agentB: Replace internal message history with new context
+    agentManager->>agentB: Activate Agent B
+    deactivate agentManager
+
+    activate agentB
+    agentB->>agentB: Process task using injected context
+    deactivate agentB
 ```
 
 ## Key Features
@@ -180,7 +187,7 @@ The system employs a centralized Agent Manager that:
 - Maintains the registry of available specialized agents.
 - Handles selection of the appropriate agent for each task.
 - Manages the transfer process between agents.
-- Ensures context preservation during transitions.
+- Ensures context sharing during transitions.
 
 ### Agent Activation
 
@@ -313,8 +320,9 @@ The following features are planned for future releases:
 - [ ] **Local Model Support**: Add ONNX runtime integration.
 - [ ] **Advanced Memory Indexing**: Improve memory retrieval accuracy and
       performance.
-- [x] **Adaptive User Context**: Agent can build up a context and knowledge base
-      when interact with user and use it to tailor the response
+- ~~[x] **Adaptive User Context**: Agent can build up a context and knowledge
+  base when interact with user and use it to tailor the response~~ => due to
+  messing around with current request, will comeback on this later
 - [x] **Multi-Agent Collaboration**: Enable multiple agents to work together on
       complex tasks.
 

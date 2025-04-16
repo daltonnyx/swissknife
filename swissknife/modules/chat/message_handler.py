@@ -317,6 +317,7 @@ class MessageHandler(Observable):
                 ],
                 self.llm.provider_name,
             )
+            self.agent_manager.rebuild_agents_messages(self.streamline_messages)
             self.conversation_turns = self.conversation_turns[: turn_number - 1]
             self.last_assisstant_response_idx = len(self.messages)
 
