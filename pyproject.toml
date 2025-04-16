@@ -1,6 +1,6 @@
 [project]
 name = "swissknife"
-version = "0.2.6"
+version = "0.3.0"
 requires-python = ">=3.10"
 classifiers = ["Private :: Do not upload"]
 description = "Claude AI Interactive Chat Tool"
