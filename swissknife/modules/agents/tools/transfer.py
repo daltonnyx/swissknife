@@ -21,10 +21,10 @@ def get_transfer_tool_definition(provider="claude") -> Dict[str, Any]:
             "type": "string",
             "description": "A precise description of the task the target agent should perform. This description MUST include the triggering keywords that prompted the transfer. Be specific and actionable.",
         },
-        "keywords": {
+        "relevant_messages": {
             "type": "array",
-            "items": {"type": "string"},
-            "description": "keywords for transfered agent retrieving relevant context from memory",
+            "items": {"type": "integer"},
+            "description": "MUST include 0-based index of previous chat messages relates to this task, user messages, tool use results, assistant messages",
         },
         "report_back": {
             "type": "boolean",
@@ -37,7 +37,7 @@ def get_transfer_tool_definition(provider="claude") -> Dict[str, Any]:
             "description": "When `report_back` is `true`, provide the detailed results of the completed task for the original agent. This should include comprehensive information about what was accomplished and any relevant findings.",
         },
     }
-    tool_required = ["target_agent", "task", "keywords"]
+    tool_required = ["target_agent", "task", "relevant_messages"]
     if provider == "claude":
         return {
             "name": "transfer",
@@ -88,7 +88,7 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
         """
         target_agent = params.get("target_agent")
         task = params.get("task")
-        keywords = params.get("keywords", [])
+        relevant_messages = params.get("relevant_messages", [])
         report_back = params.get("report_back", True)
         report_result = params.get("report_result", "")
 
@@ -98,36 +98,26 @@ def get_transfer_tool_handler(agent_manager) -> Callable:
         if not task:
             return "Error: No task specified for the transfer"
 
-        context_summary = ""
+        if target_agent == agent_manager.current_agent.name:
+            return "Error: Cannot transfer to same agent"
 
-        result = agent_manager.perform_transfer(target_agent, task, context_summary)
+        result = agent_manager.perform_transfer(target_agent, task, relevant_messages)
         if target_agent == "None":
             return "Error: Task is completed. This transfer is invalid"
 
         response = ""
 
-        if agent_manager.current_conversation_id:
-            from swissknife.modules.memory import MemoryService
+        if result["success"] and result["transfer"]["from"] != "None":
+            response = f"Here is your task from {result['transfer']['from']}: {task}"
 
-            memory = MemoryService()
-            context_summary = memory.retrieve_message_markdown(
-                keywords, agent_manager.current_conversation_id, target_agent
-            )
-            context_summary += "\n\n---\n\n"
+            if report_back and "transfer" in result:
+                response += f"\n\nTransfer back to {result['transfer']['from']} with detail report for further processing."
 
-        if result["success"]:
-            if (
-                report_back
-                and "transfer" in result
-                and result["transfer"]["from"] != "None"
-            ):
-                response = f"{task}\n\nTransfer back to {result['transfer']['from']} with detail report for further processing.\n\nContext summary: {context_summary}"
-            else:
-                response = f"{task}\n\nContext summary: \n\n{context_summary}"
             if report_result.strip():
                 response = response + f"\n\n Task result {report_result}"
 
-            response += f"\n\nSearch memory using these keywords if need more context: {', '.join(keywords)}"
+            if result["transfer"]["relevant_data"]:
+                response += f"\n\nRelevant messages:\n{'\n'.join(result['transfer']['relevant_data'])}"
 
             return response
 

@@ -88,6 +88,16 @@ class ModelRegistry:
                 output_token_price_1m=10.0,
             ),
             Model(
+                id="gpt-4o-mini",
+                provider="openai",
+                name="GPT-4o Mini",
+                description="small, quick GPT model",
+                capabilities=["tool_use", "vision"],
+                input_token_price_1m=0.15,
+                output_token_price_1m=0.6,
+                default=True,
+            ),
+            Model(
                 id="gpt-4.1",
                 provider="openai",
                 name="GPT-4.1",

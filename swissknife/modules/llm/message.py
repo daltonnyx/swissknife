@@ -27,9 +27,8 @@ class MessageTransformer:
             return MessageTransformer._standardize_openai_messages(messages, agent)
         elif source_provider == "google":
             return MessageTransformer._standardize_google_messages(messages, agent)
-        elif source_provider == "groq" or source_provider == "deepinfra":
+        else:
             return MessageTransformer._standardize_groq_messages(messages, agent)
-        return messages
 
     @staticmethod
     def convert_messages(
@@ -45,15 +44,15 @@ class MessageTransformer:
         Returns:
             Provider-specific messages
         """
+
         if target_provider == "claude":
             return MessageTransformer._convert_to_claude_format(messages)
         elif target_provider == "openai":
             return MessageTransformer._convert_to_openai_format(messages)
         elif target_provider == "google":
             return MessageTransformer._convert_to_google_format(messages)
-        elif target_provider == "groq" or target_provider == "deepinfra":
+        else:
             return MessageTransformer._convert_to_groq_format(messages)
-        return messages
 
     @staticmethod
     def _standardize_claude_messages(
@@ -63,8 +62,7 @@ class MessageTransformer:
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
-            if msg.get("role", "") == "assistant":
-                std_msg["agent"] = agent
+            std_msg["agent"] = agent
 
             # Handle content based on type
             content = msg.get("content", [])
@@ -112,7 +110,6 @@ class MessageTransformer:
                                 else:
                                     content = item["content"]
                             except Exception as e:
-                                print(f"================={str(e)}")
                                 pass
                             std_msg["tool_result"] = {
                                 "tool_use_id": item.get("tool_use_id", ""),
@@ -203,12 +200,18 @@ class MessageTransformer:
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
-            if msg.get("role", "") == "assistant":
-                std_msg["agent"] = agent
+            std_msg["agent"] = agent
 
             # Handle content
             if "content" in msg:
-                std_msg["content"] = msg["content"]
+                if (
+                    isinstance(msg["content"], str)
+                    and msg.get("role", "") == "assistant"
+                ):
+                    std_msg["content"] = [{"type": "text", "text": msg["content"]}]
+
+                else:
+                    std_msg["content"] = msg["content"]
 
             # Handle tool calls
             if "tool_calls" in msg:
@@ -243,8 +246,7 @@ class MessageTransformer:
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
-            if msg.get("role", "") == "assistant":
-                std_msg["agent"] = agent
+            std_msg["agent"] = agent
 
             # Handle content
             if "content" in msg:
@@ -292,8 +294,7 @@ class MessageTransformer:
         standardized = []
         for msg in messages:
             std_msg = {"role": msg.get("role", "")}
-            if msg.get("role", "") == "assistant":
-                std_msg["agent"] = agent
+            std_msg["agent"] = agent
 
             # Handle content
             if "content" in msg:
@@ -490,7 +491,7 @@ class MessageTransformer:
                 if (
                     isinstance(msg["content"], List)
                     and msg["content"]
-                    and google_msg["role"] == "assistant"
+                    and msg["role"] == "assistant"
                 ):
                     google_msg["content"] = msg["content"][0]["text"]
                 else:
@@ -538,10 +539,11 @@ class MessageTransformer:
 
             # Handle content
             if "content" in msg:
+                print(msg["content"])
                 if (
                     isinstance(msg["content"], List)
-                    and msg["content"]
-                    and groq_msg["role"] == "assistant"
+                    and len(msg["content"]) > 0
+                    and msg["role"] == "assistant"
                 ):
                     groq_msg["content"] = msg["content"][0]["text"]
                 else:
@@ -579,5 +581,6 @@ class MessageTransformer:
                 if msg["tool_result"].get("is_error", False):
                     groq_msg["content"] = f"ERROR: {groq_msg['content']}"
 
+            print(groq_msg)
             groq_messages.append(groq_msg)
         return groq_messages

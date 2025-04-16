@@ -19,6 +19,7 @@ class DeepInfraService(OpenAIService):
         )
         self.model = "deepseek-ai/DeepSeek-V3-0324"
         self.current_input_tokens = 0
+        self._provider_name = "deepinfra"
         self.current_output_tokens = 0
         self._is_stream = False
 
@@ -38,10 +39,10 @@ class DeepInfraService(OpenAIService):
         """
         # OpenAI format for tool responses
         message = {
-            "name": tool_use["name"],
-            "role": "user",
+            "role": "tool",
             "tool_call_id": tool_use["id"],
-            "content": str(tool_result),
+            "name": tool_use["name"],
+            "content": str(tool_result),  # Groq expects string content
         }
 
         # Add error indication if needed
@@ -70,7 +71,6 @@ class DeepInfraService(OpenAIService):
         # Add tools if available
         if self.tools:
             stream_params["tools"] = self.tools
-            stream_params["tool_choice"] = "auto"
 
         response = self.client.chat.completions.create(**stream_params, stream=False)
 
