@@ -1,6 +1,8 @@
 import toml
 import json
 from typing import Dict, Any, Optional, List
+
+from swissknife.modules.llm.message import MessageTransformer
 from .base import Agent
 
 
@@ -48,7 +50,7 @@ class AgentManager:
     def __init__(self, config_path: Optional[str] = None):
         """Initialize the agent manager."""
         if not self._initialized:
-            self.agents = {}
+            self.agents: Dict[str, Agent] = {}
             self.current_agent: Optional[Agent] = None
             self.transfer_history = []
             self._initialized = True
@@ -120,9 +122,15 @@ class AgentManager:
 
     def rebuild_agents_messages(self, streamline_messages):
         self.clean_agents_messages()
-        for msg in streamline_messages:
-            if msg.get("agent", "") in self.agents:
-                self.agents[msg.get("agent")].history.append(msg)
+        for k, agent in self.agents.items():
+            agent.history = MessageTransformer.convert_messages(
+                [
+                    msg
+                    for msg in streamline_messages
+                    if msg.get("agent", "") == agent.name
+                ],
+                agent.llm.provider_name,
+            )
 
     def get_current_agent(self) -> Agent:
         """
@@ -150,11 +158,9 @@ class AgentManager:
             A dictionary with the result of the transfer
         """
         if target_agent_name not in self.agents:
-            return {
-                "success": False,
-                "error": f"Agent '{target_agent_name}' not found",
-                "available_agents": list(self.agents.keys()),
-            }
+            raise ValueError(
+                f"Agent '{target_agent_name}' not found. Available_agents: {list(self.agents.keys())}"
+            )
 
         source_agent = self.current_agent
 
@@ -163,7 +169,7 @@ class AgentManager:
         if source_agent:
             if target_agent_name not in source_agent.shared_context_pool:
                 source_agent.shared_context_pool[target_agent_name] = []
-            for i, msg in enumerate(source_agent.history):
+            for i, msg in enumerate(source_agent.std_history):
                 if (
                     i in relevant_messages
                     and i not in source_agent.shared_context_pool[target_agent_name]
@@ -175,9 +181,11 @@ class AgentManager:
                         elif (
                             isinstance(msg["content"], List) and len(msg["content"]) > 0
                         ):
-                            if "text" == msg.get("content")[0].get("type", ""):
-                                content = msg.get("content")[0]["text"]
-                            elif msg.get("content")[0].get("type", "") == "image_url":
+                            if "text" == msg.get("content", [])[0].get("type", ""):
+                                content = msg.get("content", [])[0]["text"]
+                            elif (
+                                msg.get("content", [])[0].get("type", "") == "image_url"
+                            ):
                                 direct_injected_messages.append(msg)
                         if msg.get("role", "") == "tool":
                             content = msg.get("tool_result", {}).get("content", "")
@@ -203,7 +211,11 @@ class AgentManager:
         # Set the new current agent
         self.select_agent(target_agent_name)
         if direct_injected_messages and self.current_agent:
-            self.current_agent.history.extend(direct_injected_messages)
+            self.current_agent.history.extend(
+                MessageTransformer.convert_messages(
+                    direct_injected_messages, self.current_agent.llm.provider_name
+                )
+            )
 
         self.transfer_history.append(transfer_record)
 

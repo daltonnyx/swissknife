@@ -114,7 +114,7 @@ class ChatWindow(QMainWindow, Observer):
 
         # Create the status indicator (showing current agent and model)
         self.status_indicator = QLabel(
-            f"Agent: {self.message_handler.agent_name} | Model: {self.message_handler.llm.model}"
+            f"Agent: {self.message_handler.agent.name} | Model: {self.message_handler.agent.llm.model}"
         )
         self.status_indicator.setStyleSheet(
             """
@@ -604,7 +604,7 @@ class ChatWindow(QMainWindow, Observer):
         agent_name = (
             agent_name
             if agent_name
-            else self.message_handler.agent_name
+            else self.message_handler.agent.name
             if not is_user
             else "YOU"
         )
@@ -651,7 +651,7 @@ class ChatWindow(QMainWindow, Observer):
         # self.display_response_chunk(response)
 
         # Calculate cost
-        total_cost = self.message_handler.llm.calculate_cost(
+        total_cost = self.message_handler.agent.llm.calculate_cost(
             input_tokens, output_tokens
         )
 
@@ -1278,9 +1278,9 @@ class ChatWindow(QMainWindow, Observer):
 
         try:
             # Format the messages for display
-            debug_info = json.dumps(self.message_handler.messages, indent=2)
+            debug_info = json.dumps(self.message_handler.agent.history, indent=2)
         except Exception as e:
-            debug_info = str(self.message_handler.messages)
+            debug_info = str(self.message_handler.agent.history)
         # Add as a system message
         self.add_system_message(f"DEBUG INFO:\n\n```json\n{debug_info}\n```")
 
@@ -1421,17 +1421,17 @@ class ChatWindow(QMainWindow, Observer):
         elif event == "agent_changed":
             self.add_system_message(f"Switched to {data} agent")
             self.status_indicator.setText(
-                f"Agent: {data} | Model: {self.message_handler.llm.model}"
+                f"Agent: {data} | Model: {self.message_handler.agent.llm.model}"
             )
         elif event == "model_changed":
             self.add_system_message(f"Switched to {data['name']} ({data['id']})")
             self.status_indicator.setText(
-                f"Agent: {self.message_handler.agent_name} | Model: {data['id']}"
+                f"Agent: {self.message_handler.agent.name} | Model: {data['id']}"
             )
         elif event == "agent_changed_by_transfer":
             self.add_system_message(f"Transfered to {data} agent")
             self.status_indicator.setText(
-                f"Agent: {data} | Model: {self.message_handler.llm.model}"
+                f"Agent: {data} | Model: {self.message_handler.agent.llm.model}"
             )
             # Reset the current response bubble so the next agent message starts in a new bubble
             self.current_response_bubble = None

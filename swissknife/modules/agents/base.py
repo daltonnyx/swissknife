@@ -1,6 +1,8 @@
 from abc import ABC
 from typing import Dict, Any, List
+from swissknife.modules.llm.base import BaseLLMService
 from swissknife.modules.prompts.constants import ANALYSIS_PROMPT
+from swissknife.modules.llm.message import MessageTransformer
 
 
 class Agent(ABC):
@@ -10,7 +12,7 @@ class Agent(ABC):
         self,
         name: str,
         description: str,
-        llm_service,
+        llm_service: BaseLLMService,
         services: Dict[str, Any],
         tools: List[str],
     ):
@@ -188,7 +190,7 @@ class Agent(ABC):
         Returns:
             The system prompt
         """
-        return self.system_prompt
+        return self.system_prompt or ""
 
     def activate(self):
         """
@@ -282,7 +284,13 @@ class Agent(ABC):
             self.registered_tools.clear()
             # Note: We don't clear self.tool_definitions as we want to keep the definitions
 
-    def update_llm_service(self, new_llm_service):
+    @property
+    def std_history(self):
+        return MessageTransformer.standardize_messages(
+            self.history, self.llm.provider_name, self.name
+        )
+
+    def update_llm_service(self, new_llm_service: BaseLLMService):
         """
         Update the LLM service used by this agent.
 
@@ -297,6 +305,20 @@ class Agent(ABC):
         # Deactivate with the current LLM if active
         if was_active:
             self.deactivate()
+
+        # Get the current provider
+        current_provider = self.llm.provider_name
+
+        # If we're switching providers, convert messages
+        if current_provider != new_llm_service.provider_name:
+            # Standardize messages from current provider
+            std_messages = MessageTransformer.standardize_messages(
+                self.history, current_provider, self.name
+            )
+            # Convert to new provider format
+            self.history = MessageTransformer.convert_messages(
+                std_messages, new_llm_service.provider_name
+            )
 
         # Update the LLM service
         self.llm = new_llm_service

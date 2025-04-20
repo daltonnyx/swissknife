@@ -11,7 +11,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
 
-from swissknife.modules.chat.message_handler import Observer
+from swissknife.modules.chat.message_handler import MessageHandler, Observer
 from swissknife.modules.chat.completers import ChatCompleter
 from swissknife.modules.chat.constants import (
     YELLOW,
@@ -32,7 +32,7 @@ class ConsoleUI(Observer):
     to receive updates from the MessageHandler.
     """
 
-    def __init__(self, message_handler):
+    def __init__(self, message_handler: MessageHandler):
         """
         Initialize the ConsoleUI.
 
@@ -139,7 +139,7 @@ class ConsoleUI(Observer):
     def update_live_display(self, chunk: str):
         """Update the live display with a new chunk of the response."""
         if not self.live:
-            self.start_streaming_response(self.message_handler.agent_name)
+            self.start_streaming_response(self.message_handler.agent.name)
 
         updated_text = chunk
 
@@ -324,7 +324,7 @@ class ConsoleUI(Observer):
                 print(content)
                 self.display_divider()
             elif role == "assistant":
-                agent_name = self.message_handler.agent_name
+                agent_name = self.message_handler.agent.name
                 print(f"\n{GREEN}{BOLD}🤖 {agent_name.upper()}:{RESET}")
                 content = self._extract_message_content(msg)
                 # Format as markdown for better display
@@ -378,7 +378,7 @@ class ConsoleUI(Observer):
         print(f"\n{BLUE}{BOLD}👤 YOU:{RESET}")
         print(
             f"{YELLOW}🤖 "
-            f"{self.message_handler.agent_name} 🧠 {self.message_handler.llm.model}\n"
+            f"{self.message_handler.agent.name} 🧠 {self.message_handler.agent.llm.model}\n"
             f"(Press Enter for new line, Ctrl+S to submit, Up/Down for history)"
             f"{RESET}"
         )
@@ -577,7 +577,7 @@ class ConsoleUI(Observer):
                 continue
 
             # Skip to next iteration if no messages to process
-            if not self.message_handler.messages:
+            if not self.message_handler.agent.history:
                 continue
 
             # Start streaming response
@@ -590,7 +590,7 @@ class ConsoleUI(Observer):
 
             if assistant_response:
                 # Calculate and display token usage
-                total_cost = self.message_handler.llm.calculate_cost(
+                total_cost = self.message_handler.agent.llm.calculate_cost(
                     input_tokens, output_tokens
                 )
                 session_cost += total_cost

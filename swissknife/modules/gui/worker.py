@@ -1,4 +1,5 @@
 import traceback
+from swissknife.modules.chat.message_handler import MessageHandler
 
 from PySide6.QtCore import (
     Slot,
@@ -30,7 +31,7 @@ class LLMWorker(QObject):
         self.user_input = None
         self.message_handler = None  # Will be set in connect_handler
 
-    def connect_handler(self, message_handler):
+    def connect_handler(self, message_handler: MessageHandler):
         """Connect to the message handler - called from main thread before processing begins"""
         self.message_handler = message_handler
         # Connect the process_request signal to our processing slot
@@ -72,7 +73,7 @@ class LLMWorker(QObject):
                 )
 
                 # Calculate cost
-                total_cost = self.message_handler.llm.calculate_cost(
+                total_cost = self.message_handler.agent.llm.calculate_cost(
                     input_tokens, output_tokens
                 )
 
