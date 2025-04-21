@@ -281,9 +281,9 @@ class AgentManager:
     - Use `relevant_messages` to provide any messages index (files content, tool results, user messages) related to the task.
     - To perform a transfer, use `transfer` tool with target_agent, task, relevant_messages arguments.
   </instructions>
-  <agent_list>
+  <other_agents>
   {"\n".join(agent_descriptions)}
-  </agent_list>
+  </other_agents>
 </Agents>"""
 
         return transfer_prompt

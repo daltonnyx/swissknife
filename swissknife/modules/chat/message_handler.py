@@ -522,67 +522,43 @@ class MessageHandler(Observable):
         end_thinking = False
         context_data_processed = False
         try:
-            with self.agent.llm.stream_assistant_response(self.agent.history) as stream:
-                for chunk in stream:
-                    # Process the chunk using the LLM service
-                    (
-                        assistant_response,
-                        tool_uses,
-                        chunk_input_tokens,
-                        chunk_output_tokens,
-                        chunk_text,
-                        thinking_chunk,
-                    ) = self.agent.llm.process_stream_chunk(
-                        chunk, assistant_response, tool_uses
-                    )
+            for (
+                assistant_response,
+                chunk_text,
+                thinking_chunk,
+            ) in self.agent.process_messages():
+                # Accumulate thinking content if available
+                if thinking_chunk:
+                    think_text_chunk, signature = thinking_chunk
 
-                    clean_response = assistant_response
-                    # context_data, clean_response = self.llm.parse_user_context_summary(
-                    #     assistant_response
-                    # )
-                    # if context_data and not context_data_processed:
-                    #     # self._notify("debug_requested", context_data)
-                    #     self.persistent_service.store_user_context(context_data)
-                    #     context_data_processed = True
-                    #     # self.messages.append(
-                    #     #     self.llm.format_assistant_message(
-                    #     #         f"""Need to tailor response bases on this <user_context_summary>{json.dumps(context_data)}</user_context_summary>"""
-                    #     #     )
-                    #     # )
-
-                    # Update token counts
-                    if chunk_input_tokens > 0:
-                        input_tokens = chunk_input_tokens
-                    if chunk_output_tokens > 0:
-                        output_tokens = chunk_output_tokens
-
-                    # Accumulate thinking content if available
-                    if thinking_chunk:
-                        think_text_chunk, signature = thinking_chunk
-
-                        if not start_thinking:
-                            # Notify about thinking process
-                            self._notify("thinking_started", self.agent.name)
-                            if not self.agent.llm.is_stream:
-                                # Delays it a bit when using without stream
-                                time.sleep(0.5)
-                            start_thinking = True
-                        if think_text_chunk:
-                            thinking_content += think_text_chunk
-                            self._notify("thinking_chunk", think_text_chunk)
-                        if signature:
-                            thinking_signature += signature
-                    if chunk_text:
-                        # End thinking when chunk_text start
-                        if not end_thinking and start_thinking:
-                            self._notify("thinking_completed")
-                            end_thinking = True
-                        # Notify about response progress
+                    if not start_thinking:
+                        # Notify about thinking process
+                        self._notify("thinking_started", self.agent.name)
                         if not self.agent.llm.is_stream:
                             # Delays it a bit when using without stream
                             time.sleep(0.5)
-                        self._notify("response_chunk", (chunk_text, clean_response))
+                        start_thinking = True
+                    if think_text_chunk:
+                        thinking_content += think_text_chunk
+                        self._notify("thinking_chunk", think_text_chunk)
+                    if signature:
+                        thinking_signature += signature
+                if chunk_text:
+                    # End thinking when chunk_text start
+                    if not end_thinking and start_thinking:
+                        self._notify("thinking_completed")
+                        end_thinking = True
+                    # Notify about response progress
+                    if not self.agent.llm.is_stream:
+                        # Delays it a bit when using without stream
+                        time.sleep(0.5)
+                    self._notify("response_chunk", (chunk_text, assistant_response))
 
+            tool_uses, input_tokens_in_turn, output_tokens_in_turn = (
+                self.agent.get_process_result()
+            )
+            input_tokens += input_tokens_in_turn
+            output_tokens_in_turn += output_tokens_in_turn
             # Handle tool use if needed
             if tool_uses and len(tool_uses) > 0:
                 # Add thinking content as a separate message if available

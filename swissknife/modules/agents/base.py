@@ -329,7 +329,7 @@ class Agent(ABC):
 
         return True
 
-    def process_messages(self, messages: List[Dict[str, Any]]):
+    def process_messages(self):
         """
         Process messages using this agent.
 
@@ -339,12 +339,30 @@ class Agent(ABC):
         Returns:
             The processed messages with the agent's response
         """
+        assistant_response = ""
+        self.tool_uses = []
+        self.input_tokens_usage = 0
+        self.output_tokens_usage = 0
         # Ensure the first message is a system message with the agent's prompt
-        if not messages or messages[0].get("role") != "system":
-            system_message = {"role": "system", "content": self.get_system_prompt()}
-            messages = [system_message] + messages
-        elif messages[0].get("role") == "system":
-            # Update the system message with this agent's prompt
-            messages[0]["content"] = self.get_system_prompt()
+        with self.llm.stream_assistant_response(self.history) as stream:
+            for chunk in stream:
+                # Process the chunk using the LLM service
+                (
+                    assistant_response,
+                    tool_uses,
+                    chunk_input_tokens,
+                    chunk_output_tokens,
+                    chunk_text,
+                    thinking_chunk,
+                ) = self.llm.process_stream_chunk(
+                    chunk, assistant_response, self.tool_uses
+                )
+                self.tool_uses = tool_uses
+                if chunk_input_tokens > 0:
+                    self.input_tokens_usage += chunk_input_tokens
+                if chunk_output_tokens > 0:
+                    self.output_tokens_usage += chunk_output_tokens
+                yield (assistant_response, chunk_text, thinking_chunk)
 
-        return messages
+    def get_process_result(self):
+        return (self.tool_uses, self.input_tokens_usage, self.output_tokens_usage)
