@@ -4,6 +4,7 @@ import traceback
 import os
 import time
 
+from swissknife.modules.agents.base import MessageType
 from swissknife.modules.chat.history import ChatHistoryManager, ConversationTurn
 from swissknife.modules.agents import AgentManager
 from swissknife.modules.chat.file_handler import FileHandler
@@ -85,15 +86,13 @@ class MessageHandler(Observable):
         self.agent.history.append(message)
 
         std_msg = MessageTransformer.standardize_messages(
-            [message], self.agent.llm.provider_name, self.agent.name
+            [message], self.agent.get_provider(), self.agent.name
         )
         self.streamline_messages.extend(std_msg)
 
     def process_user_input(
         self,
         user_input: str,
-        message_content: Optional[List[Dict]] = None,  # deprecated
-        files: Optional[List[str]] = None,  # deprecated
     ) -> Tuple[bool, bool]:
         """
         Processes user input, handles commands, and updates message history.
@@ -132,7 +131,7 @@ class MessageHandler(Observable):
         if user_input.lower().startswith("/think "):
             try:
                 budget = user_input[7:].strip()
-                self.agent.llm.set_think(budget)
+                self.agent.configure_think(budget)
                 self._notify("think_budget_set", budget)
             except ValueError:
                 self._notify("error", "Invalid budget value. Please provide a number.")
@@ -185,7 +184,9 @@ class MessageHandler(Observable):
             file_content = self.file_handler.process_file(file_path)
             # Fallback to llm handle
             if not file_content:
-                file_content = self.agent.llm.process_file_for_message(file_path)
+                file_content = self.agent.format_message(
+                    MessageType.FileContent, {"file_uri": file_path}
+                )
 
             if file_content:
                 self._messages_append({"role": "user", "content": [file_content]})
@@ -467,7 +468,7 @@ class MessageHandler(Observable):
                 self.current_conversation_id,
                 MessageTransformer.standardize_messages(
                     self.agent.history[self.last_assisstant_response_idx :],
-                    self.agent.llm.provider_name,
+                    self.agent.get_provider(),
                     owner_agent.name,
                 ),
             )
@@ -520,7 +521,6 @@ class MessageHandler(Observable):
         thinking_signature = ""  # Store the signature
         start_thinking = False
         end_thinking = False
-        context_data_processed = False
         try:
             for (
                 assistant_response,
@@ -534,7 +534,7 @@ class MessageHandler(Observable):
                     if not start_thinking:
                         # Notify about thinking process
                         self._notify("thinking_started", self.agent.name)
-                        if not self.agent.llm.is_stream:
+                        if not self.agent.is_streaming():
                             # Delays it a bit when using without stream
                             time.sleep(0.5)
                         start_thinking = True
@@ -549,7 +549,7 @@ class MessageHandler(Observable):
                         self._notify("thinking_completed")
                         end_thinking = True
                     # Notify about response progress
-                    if not self.agent.llm.is_stream:
+                    if not self.agent.is_streaming():
                         # Delays it a bit when using without stream
                         time.sleep(0.5)
                     self._notify("response_chunk", (chunk_text, assistant_response))
@@ -565,15 +565,20 @@ class MessageHandler(Observable):
                 thinking_data = (
                     (thinking_content, thinking_signature) if thinking_content else None
                 )
-                thinking_message = self.agent.llm.format_thinking_message(thinking_data)
+                thinking_message = self.agent.format_message(
+                    MessageType.Thinking, {"thinking": thinking_data}
+                )
                 if thinking_message:
                     self._messages_append(thinking_message)
                     self._notify("thinking_message_added", thinking_message)
 
                 # Format assistant message with the response and tool uses
-                assistant_message = self.agent.llm.format_assistant_message(
-                    assistant_response,
-                    [t for t in tool_uses if t["name"] != "transfer"],
+                assistant_message = self.agent.format_message(
+                    MessageType.Assistant,
+                    {
+                        "message": assistant_response,
+                        "tool_uses": [t for t in tool_uses if t["name"] != "transfer"],
+                    },
                 )
                 self._messages_append(assistant_message)
                 self._notify("assistant_message_added", assistant_message)
@@ -588,7 +593,7 @@ class MessageHandler(Observable):
                         if tool_use["name"] == "transfer":
                             owner_agent = self._pre_tool_transfer()
 
-                        tool_result = self.agent.llm.execute_tool(
+                        tool_result = self.agent.execute_tool_call(
                             tool_use["name"], tool_use["input"]
                         )
 
@@ -596,8 +601,9 @@ class MessageHandler(Observable):
                             self._post_tool_transfer(tool_result, owner_agent)
 
                         else:
-                            tool_result_message = self.agent.llm.format_tool_result(
-                                tool_use, tool_result
+                            tool_result_message = self.agent.format_message(
+                                MessageType.ToolResult,
+                                {"tool_use": tool_use, "tool_result": tool_result},
                             )
                             self._messages_append(tool_result_message)
                             self._notify(
@@ -622,14 +628,22 @@ class MessageHandler(Observable):
                         if tool_use["name"] == "transfer":
                             # if transfer failed we should add the tool_call message back for record
                             self._messages_append(
-                                self.agent.llm.format_assistant_message(
-                                    assistant_response,
-                                    [tool_use],
+                                self.agent.format_message(
+                                    MessageType.Assistant,
+                                    {
+                                        "message": assistant_response,
+                                        "tool_uses": [tool_use],
+                                    },
                                 )
                             )
 
-                        error_message = self.agent.llm.format_tool_result(
-                            tool_use, str(e), is_error=True
+                        error_message = self.agent.format_message(
+                            MessageType.ToolResult,
+                            {
+                                "tool_use": tool_use,
+                                "tool_result": str(e),
+                                "is_error": True,
+                            },
                         )
                         self._messages_append(error_message)
                         self._notify(
@@ -656,7 +670,9 @@ class MessageHandler(Observable):
             # Add assistant response to messages
             if assistant_response:
                 self._messages_append(
-                    self.agent.llm.format_assistant_message(assistant_response)
+                    self.agent.format_message(
+                        MessageType.Assistant, {"message": assistant_response}
+                    )
                 )
 
             if self.current_user_input and self.current_user_input_idx >= 0:
@@ -694,7 +710,7 @@ class MessageHandler(Observable):
             if self.current_conversation_id and self.last_assisstant_response_idx >= 0:
                 try:
                     # Get all messages added since the user input for this turn
-                    current_provider = self.agent.llm.provider_name
+                    current_provider = self.agent.get_provider()
                     messages_for_this_turn = MessageTransformer.standardize_messages(
                         self.agent.history[self.last_assisstant_response_idx :],
                         current_provider,
@@ -752,7 +768,7 @@ class MessageHandler(Observable):
                 if last_agent_name and self.agent_manager.select_agent(last_agent_name):
                     self.agent = self.agent_manager.get_current_agent()
                     self._notify("agent_changed", last_agent_name)
-                current_provider = self.agent.llm.provider_name
+                current_provider = self.agent.get_provider()
                 # self.messages = MessageTransformer.convert_messages(
                 #     [msg for msg in history if msg.get("agent", "") == self.agent.name],
                 #     current_provider,

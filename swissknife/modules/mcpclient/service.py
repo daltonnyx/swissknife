@@ -87,7 +87,7 @@ class MCPService:
 
             if agent:
                 agent_manager = AgentManager.get_instance()
-                registry = agent_manager.get_agent(agent)
+                registry = agent_manager.get_local_agent(agent)
             else:
                 # Register each tool with the tool registry
                 registry = ToolRegistry.get_instance()

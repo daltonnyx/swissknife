@@ -19,7 +19,7 @@ from swissknife.modules.anthropic import AnthropicService
 from swissknife.modules.llm.service_manager import ServiceManager
 from swissknife.modules.llm.model_registry import ModelRegistry
 from swissknife.modules.coder import SpecPromptValidationService
-from swissknife.modules.agents import AgentManager, Agent
+from swissknife.modules.agents import AgentManager, LocalAgent
 from PySide6.QtWidgets import QApplication
 
 
@@ -196,7 +196,7 @@ tools = ["memory", "clipboard", "web_search", "code_analysis"]
         llm_service = services["llm"]
         if not agent_name:
             agent_name = agent_def["name"]
-        agent = Agent(
+        agent = LocalAgent(
             name=agent_def["name"],
             description=agent_def["description"],
             llm_service=llm_service,
@@ -328,7 +328,7 @@ def chat(provider, agent_config, mcp_config, console):
         else:
             ui = ConsoleUI(message_handler)
             ui.start()
-    except SystemExit as e:
+    except SystemExit:
         from swissknife.modules.mcpclient import MCPSessionManager
 
         MCPSessionManager.get_instance().cleanup()

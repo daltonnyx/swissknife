@@ -1,5 +1,4 @@
 import os
-import base64
 import contextlib
 import json
 import mimetypes

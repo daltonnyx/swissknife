@@ -1,4 +1,5 @@
-from .base import Agent
+from .local_agent import LocalAgent
+from .base import BaseAgent
 from .manager import AgentManager
 
-__all__ = ["AgentManager", "Agent"]
+__all__ = ["AgentManager", "LocalAgent", "BaseAgent"]

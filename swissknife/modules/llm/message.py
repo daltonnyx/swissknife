@@ -109,7 +109,7 @@ class MessageTransformer:
                                     ][0]["text"]
                                 else:
                                     content = item["content"]
-                            except Exception as e:
+                            except Exception:
                                 pass
                             std_msg["role"] = "tool"
                             std_msg["tool_result"] = {

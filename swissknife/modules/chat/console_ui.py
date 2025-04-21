@@ -63,7 +63,7 @@ class ConsoleUI(Observer):
         elif event == "thinking_chunk":
             self.display_thinking_chunk(data)  # data is the thinking chunk
         elif event == "response_chunk":
-            chunk, assistant_response = data
+            _, assistant_response = data
             self.update_live_display(assistant_response)  # data is the response chunk
         elif event == "tool_use":
             self.display_tool_use(data)  # data is the tool use object
@@ -378,7 +378,7 @@ class ConsoleUI(Observer):
         print(f"\n{BLUE}{BOLD}👤 YOU:{RESET}")
         print(
             f"{YELLOW}🤖 "
-            f"{self.message_handler.agent.name} 🧠 {self.message_handler.agent.llm.model}\n"
+            f"{self.message_handler.agent.name} 🧠 {self.message_handler.agent.get_model()}\n"
             f"(Press Enter for new line, Ctrl+S to submit, Up/Down for history)"
             f"{RESET}"
         )
@@ -590,7 +590,7 @@ class ConsoleUI(Observer):
 
             if assistant_response:
                 # Calculate and display token usage
-                total_cost = self.message_handler.agent.llm.calculate_cost(
+                total_cost = self.message_handler.agent.calculate_usage_cost(
                     input_tokens, output_tokens
                 )
                 session_cost += total_cost

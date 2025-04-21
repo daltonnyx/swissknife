@@ -73,7 +73,7 @@ class LLMWorker(QObject):
                 )
 
                 # Calculate cost
-                total_cost = self.message_handler.agent.llm.calculate_cost(
+                total_cost = self.message_handler.agent.calculate_usage_cost(
                     input_tokens, output_tokens
                 )
 

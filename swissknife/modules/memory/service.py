@@ -2,10 +2,7 @@ import os
 import chromadb
 import datetime
 import uuid
-import json
 from typing import List, Dict, Any
-
-from swissknife.modules.agents.base import Agent
 
 
 class MemoryService:

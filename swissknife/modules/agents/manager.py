@@ -2,8 +2,8 @@ import toml
 import json
 from typing import Dict, Any, Optional, List
 
+from swissknife.modules.agents import BaseAgent, LocalAgent
 from swissknife.modules.llm.message import MessageTransformer
-from .base import Agent
 
 
 class AgentManager:
@@ -50,8 +50,8 @@ class AgentManager:
     def __init__(self, config_path: Optional[str] = None):
         """Initialize the agent manager."""
         if not self._initialized:
-            self.agents: Dict[str, Agent] = {}
-            self.current_agent: Optional[Agent] = None
+            self.agents: Dict[str, BaseAgent] = {}
+            self.current_agent: Optional[BaseAgent] = None
             self.transfer_history = []
             self._initialized = True
 
@@ -62,7 +62,7 @@ class AgentManager:
             cls._instance = AgentManager()
         return cls._instance
 
-    def register_agent(self, agent: Agent):
+    def register_agent(self, agent: BaseAgent):
         """
         Register an agent with the manager.
 
@@ -92,10 +92,11 @@ class AgentManager:
             # Set the new agent as current
             self.current_agent = new_agent
 
-            if self.current_agent and not self.current_agent.custom_system_prompt:
-                self.current_agent.set_custom_system_prompt(
-                    self.get_transfer_system_prompt()
-                )
+            if self.current_agent and isinstance(self.current_agent, LocalAgent):
+                if not self.current_agent.custom_system_prompt:
+                    self.current_agent.set_custom_system_prompt(
+                        self.get_transfer_system_prompt()
+                    )
             # Activate the new agent
             if self.current_agent:
                 self.current_agent.activate()
@@ -103,7 +104,7 @@ class AgentManager:
             return True
         return False
 
-    def get_agent(self, agent_name: str) -> Optional[Agent]:
+    def get_agent(self, agent_name: str) -> Optional[BaseAgent]:
         """
         Get an agent by name.
 
@@ -115,24 +116,31 @@ class AgentManager:
         """
         return self.agents.get(agent_name)
 
+    def get_local_agent(self, agent_name) -> Optional[LocalAgent]:
+        agent = self.agents.get(agent_name)
+        if isinstance(agent, LocalAgent):
+            return agent
+        else:
+            return None
+
     def clean_agents_messages(self):
-        for key, agent in self.agents.items():
+        for _, agent in self.agents.items():
             agent.history = []
             agent.shared_context_pool = {}
 
     def rebuild_agents_messages(self, streamline_messages):
         self.clean_agents_messages()
-        for k, agent in self.agents.items():
+        for _, agent in self.agents.items():
             agent.history = MessageTransformer.convert_messages(
                 [
                     msg
                     for msg in streamline_messages
                     if msg.get("agent", "") == agent.name
                 ],
-                agent.llm.provider_name,
+                agent.get_provider(),
             )
 
-    def get_current_agent(self) -> Agent:
+    def get_current_agent(self) -> BaseAgent:
         """
         Get the current agent.
 
@@ -213,7 +221,7 @@ class AgentManager:
         if direct_injected_messages and self.current_agent:
             self.current_agent.history.extend(
                 MessageTransformer.convert_messages(
-                    direct_injected_messages, self.current_agent.llm.provider_name
+                    direct_injected_messages, self.current_agent.get_provider()
                 )
             )
 
@@ -232,16 +240,18 @@ class AgentManager:
             # Deactivate the current agent
             self.current_agent.deactivate()
 
-            # Update the LLM service for the current agent
-            self.current_agent.update_llm_service(llm_service)
+            if isinstance(self.current_agent, LocalAgent):
+                # Update the LLM service for the current agent
+                self.current_agent.update_llm_service(llm_service)
 
             # Reactivate the agent with the new LLM service
             self.current_agent.activate()
 
             # Update all other agents' LLM service but keep them deactivated
-            for name, agent in self.agents.items():
+            for _, agent in self.agents.items():
                 if agent != self.current_agent:
-                    agent.update_llm_service(llm_service)
+                    if isinstance(agent, LocalAgent):
+                        agent.update_llm_service(llm_service)
 
     def get_transfer_system_prompt(self):
         """
@@ -263,7 +273,7 @@ class AgentManager:
                 agent_desc = f"    <agent>\n      <name>{name}</name>\n      <description>{agent.description}</description>"
             else:
                 agent_desc = f"    <agent>\n      <name>{name}</name>"
-            if len(agent.tools) > 0:
+            if isinstance(agent, LocalAgent) and agent.tools and len(agent.tools) > 0:
                 agent_desc += f"\n      <tools>\n        <tool>{'</tool>\n        <tool>'.join(agent.tools)}</tool>\n      </tools>\n    </agent>"
             else:
                 agent_desc += "\n    </agent>"
