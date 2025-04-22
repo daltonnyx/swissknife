@@ -100,7 +100,6 @@ class AgentManager:
             # Activate the new agent
             if self.current_agent:
                 self.current_agent.activate()
-            print(self.current_agent.llm.system_prompt)
 
             return True
         return False

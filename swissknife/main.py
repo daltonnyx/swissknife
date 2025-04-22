@@ -337,5 +337,61 @@ def chat(provider, agent_config, mcp_config, console):
         click.echo(f"❌ Error: {str(e)}", err=True)
 
 
+@cli.command()
+@click.option("--host", default="0.0.0.0", help="Host to bind the server to")
+@click.option("--port", default=41241, help="Port to bind the server to")
+@click.option("--base-url", default=None, help="Base URL for agent endpoints")
+@click.option(
+    "--provider",
+    type=click.Choice(["claude", "groq", "openai", "google", "deepinfra"]),
+    default=None,
+    help="LLM provider to use (claude, groq, openai, google, or deepinfra)",
+)
+@click.option("--agent-config", default=None, help="Path to agent configuration file")
+def a2a_server(host, port, base_url, provider, agent_config):
+    """Start an A2A server exposing all SwissKnife agents"""
+    try:
+        # Set default base URL if not provided
+        if not base_url:
+            base_url = f"http://{host}:{port}"
+
+        if provider is None:
+            if os.getenv("ANTHROPIC_API_KEY"):
+                provider = "claude"
+            elif os.getenv("GEMINI_API_KEY"):
+                provider = "google"
+            elif os.getenv("OPENAI_API_KEY"):
+                provider = "openai"
+            elif os.getenv("GROQ_API_KEY"):
+                provider = "groq"
+            elif os.getenv("DEEPINFRA_API_KEY"):
+                provider = "deepinfra"
+            else:
+                raise ValueError(
+                    "No LLM API key found. Please set either ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, or DEEPINFRA_API_KEY"
+                )
+        services = setup_services(provider)
+
+        # Set up agents from configuration
+        setup_agents(services, agent_config)
+
+        # Get agent manager
+        agent_manager = AgentManager.get_instance()
+
+        # Create and start server
+        from swissknife.modules.a2a.server import A2AServer
+
+        server = A2AServer(
+            agent_manager=agent_manager, host=host, port=port, base_url=base_url
+        )
+
+        click.echo(f"Starting A2A server on {host}:{port}")
+        click.echo(f"Available agents: {', '.join(agent_manager.agents.keys())}")
+        server.start()
+    except Exception as e:
+        print(traceback.format_exc())
+        click.echo(f"❌ Error: {str(e)}", err=True)
+
+
 if __name__ == "__main__":
     cli()

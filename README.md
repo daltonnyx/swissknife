@@ -100,6 +100,12 @@ swissknife chat --provider deepinfra
 swissknife chat --agent-config path/to/custom_agents.toml
 ```
 
+### Start Google A2A server for remote connection
+
+```bash
+uv run swissknife/main.py a2a-server --provider google --agent-config ~/.swissknife/agents.toml --port 41241
+```
+
 ## Security & Responsibility Notice
 
 Swissknife gives you powerful control over AI agents and external tools.
