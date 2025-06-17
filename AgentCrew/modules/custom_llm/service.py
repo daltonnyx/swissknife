@@ -80,6 +80,7 @@ class CustomLLMService(OpenAIService):
             # Check if using GitHub Copilot
             if self.base_url:
                 from urllib.parse import urlparse
+
                 parsed_url = urlparse(self.base_url)
                 host = parsed_url.hostname
                 if host and host.endswith(".githubcopilot.com"):
@@ -134,9 +135,14 @@ class CustomLLMService(OpenAIService):
     async def stream_assistant_response(self, messages):
         """Stream the assistant's response with tool support."""
         # Check if using GitHub Copilot
-        if self.base_url and self.base_url.rstrip("/").endswith("githubcopilot.com"):
-            # Update client with new key
-            self.github_copilot_token_to_open_ai_key(self.api_key)
+        if self.base_url:
+            from urllib.parse import urlparse
+
+            parsed_url = urlparse(self.base_url)
+            host = parsed_url.hostname
+            if host and host.endswith(".githubcopilot.com"):
+                self.base_url = self.base_url.rstrip("/")
+                self.github_copilot_token_to_open_ai_key(self.api_key)
 
         stream_params = {
             "model": self.model,
