@@ -164,7 +164,7 @@ class SettingsTab(QWidget):
             self.global_config["api_keys"] = {}
 
         for key_name, line_edit in self.api_key_inputs.items():
-            self.global_config["api_keys"][key_name] = line_edit.text()
+            self.global_config["api_keys"][key_name] = line_edit.text().strip()
 
         # Save global settings
         if "global_settings" not in self.global_config:

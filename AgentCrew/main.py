@@ -1,3 +1,7 @@
+import nest_asyncio
+
+nest_asyncio.apply()
+
 from AgentCrew.modules.config import ConfigManagement
 import click
 import importlib
@@ -24,10 +28,6 @@ from AgentCrew.modules.llm.model_registry import ModelRegistry
 from AgentCrew.modules.agents import AgentManager, LocalAgent, RemoteAgent
 from AgentCrew.modules.image_generation import ImageGenerationService
 from PySide6.QtWidgets import QApplication
-
-import nest_asyncio
-
-nest_asyncio.apply()
 
 
 @click.group()
@@ -91,7 +91,7 @@ def load_api_keys_from_config():
     for key_name in keys_to_check:
         if key_name in api_keys_config and api_keys_config[key_name]:
             # Prioritize config file over existing environment variables
-            os.environ[key_name] = str(api_keys_config[key_name])
+            os.environ[key_name] = str(api_keys_config[key_name]).strip()
 
 
 def check_and_update():

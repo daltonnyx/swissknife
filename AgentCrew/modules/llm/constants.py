@@ -189,16 +189,7 @@ _GOOGLE_MODELS = [
         default=True,
     ),
     Model(
-        id="gemini-2.5-pro-preview-05-06",
-        provider="google",
-        name="Gemini 2.5 Pro Thinking",
-        description="Gemini 2.5 Pro with thinking",
-        capabilities=["tool_use", "thinking", "vision"],
-        input_token_price_1m=1.25,
-        output_token_price_1m=2.5,
-    ),
-    Model(
-        id="gemini-2.5-pro-preview-06-05",
+        id="gemini-2.5-pro",
         provider="google",
         name="Gemini 2.5 Pro Thinking",
         description="Gemini 2.5 Pro with thinking",
