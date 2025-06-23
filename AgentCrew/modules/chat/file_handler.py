@@ -54,7 +54,10 @@ class FileHandler:
                 AcceleratorDevice,
                 AcceleratorOptions,
             )
-            from docling.datamodel.pipeline_options import PdfPipelineOptions
+            from docling.datamodel.pipeline_options import (
+                PdfPipelineOptions,
+                RapidOcrOptions,
+            )
             from docling.document_converter import DocumentConverter, PdfFormatOption
 
             try:
@@ -62,6 +65,7 @@ class FileHandler:
                 pipeline_options.do_ocr = True
                 pipeline_options.do_table_structure = True
                 pipeline_options.table_structure_options.do_cell_matching = True
+                pipeline_options.ocr_options = RapidOcrOptions()
 
                 pipeline_options.accelerator_options = AcceleratorOptions(
                     num_threads=4, device=AcceleratorDevice.AUTO
