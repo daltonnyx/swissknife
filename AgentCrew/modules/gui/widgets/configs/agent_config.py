@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
     QFileDialog,  # Added for file import
 )
 import os  # Added for path operations
+import toml  # Added for TOML export functionality
+import json  # Added for JSON export functionality
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDoubleValidator
 
@@ -66,7 +68,9 @@ class AgentsConfigTab(QWidget):
         left_layout = QVBoxLayout(left_panel)
 
         self.agents_list = QListWidget()
+        self.agents_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)  # Enable multi-select
         self.agents_list.currentItemChanged.connect(self.on_agent_selected)
+        self.agents_list.itemSelectionChanged.connect(self.on_selection_changed)
 
         # Buttons for agent list management
         list_buttons_layout = QHBoxLayout()
@@ -90,6 +94,12 @@ class AgentsConfigTab(QWidget):
         self.import_agents_btn.setStyleSheet(style_provider.get_button_style("green"))
         self.import_agents_btn.clicked.connect(self.import_agents)
 
+        # Add Export button with blue styling
+        self.export_agents_btn = QPushButton("Export")
+        self.export_agents_btn.setStyleSheet(style_provider.get_button_style("primary"))
+        self.export_agents_btn.clicked.connect(self.export_agents)
+        self.export_agents_btn.setEnabled(False)  # Disable until selection
+
         self.remove_agent_btn = QPushButton("Remove")
         self.remove_agent_btn.setStyleSheet(style_provider.get_button_style("red"))
         self.remove_agent_btn.clicked.connect(self.remove_agent)
@@ -99,6 +109,7 @@ class AgentsConfigTab(QWidget):
             self.add_agent_menu_btn
         )  # Changed from self.add_agent_btn
         list_buttons_layout.addWidget(self.import_agents_btn)
+        list_buttons_layout.addWidget(self.export_agents_btn)
         list_buttons_layout.addWidget(self.remove_agent_btn)
 
         left_layout.addWidget(QLabel("Agents:"))
@@ -243,17 +254,25 @@ class AgentsConfigTab(QWidget):
             item.setData(Qt.ItemDataRole.UserRole, item_data)
             self.agents_list.addItem(item)
 
+    def on_selection_changed(self):
+        """Handle selection changes to update button states."""
+        selected_items = self.agents_list.selectedItems()
+        has_selection = len(selected_items) > 0
+        
+        # Enable/disable export and remove buttons based on selection
+        self.export_agents_btn.setEnabled(has_selection)
+        self.remove_agent_btn.setEnabled(has_selection)
+
     def on_agent_selected(self, current, previous):
         """Handle agent selection."""
         if current is None:
             self.set_editor_enabled(False)
-            self.remove_agent_btn.setEnabled(False)
+            # Note: button states are now handled by on_selection_changed
             # Optionally hide both editors or show a placeholder
             # self.editor_stacked_widget.setCurrentIndex(-1) # or a placeholder widget index
             return
 
         self.set_editor_enabled(True)
-        self.remove_agent_btn.setEnabled(True)
 
         agent_data = current.data(Qt.ItemDataRole.UserRole)
         agent_type = agent_data.get(
@@ -417,30 +436,36 @@ class AgentsConfigTab(QWidget):
         self.remote_name_input.selectAll()
 
     def remove_agent(self):
-        """Remove the selected agent."""
-        current_item = self.agents_list.currentItem()
-        if not current_item:
+        """Remove the selected agent(s)."""
+        selected_items = self.agents_list.selectedItems()
+        if not selected_items:
             return
 
-        agent_data = current_item.data(Qt.ItemDataRole.UserRole)
-        agent_name = agent_data.get("name", "this agent")
+        if len(selected_items) == 1:
+            agent_data = selected_items[0].data(Qt.ItemDataRole.UserRole)
+            agent_name = agent_data.get("name", "this agent")
+            message = f"Are you sure you want to delete the agent '{agent_name}'?"
+        else:
+            agent_names = [item.data(Qt.ItemDataRole.UserRole).get("name", "unnamed") for item in selected_items]
+            message = f"Are you sure you want to delete {len(selected_items)} agents?\n\n• " + "\n• ".join(agent_names)
 
         reply = QMessageBox.question(
             self,
             "Confirm Deletion",
-            f"Are you sure you want to delete the agent '{agent_name}'?",
+            message,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            row = self.agents_list.row(current_item)
-            self.agents_list.takeItem(row)
+            # Remove items in reverse order to maintain valid row indices
+            rows_to_remove = sorted([self.agents_list.row(item) for item in selected_items], reverse=True)
+            for row in rows_to_remove:
+                self.agents_list.takeItem(row)
 
             # set_editor_enabled(False) is called by on_agent_selected when currentItem becomes None
             # or when a new item is selected. If list becomes empty, on_agent_selected(None, old_item) is called.
             if self.agents_list.count() == 0:
                 self.set_editor_enabled(False)  # Explicitly disable if list is empty
-                self.remove_agent_btn.setEnabled(False)
 
             self.save_all_agents()
 
@@ -711,6 +736,100 @@ class AgentsConfigTab(QWidget):
             status_message += f" Skipped {skipped_count} agent(s) due to conflicts."
 
         QMessageBox.information(self, "Import Complete", status_message)
+
+    def export_agents(self):
+        """Export selected agents to a file."""
+        selected_items = self.agents_list.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(
+                self,
+                "No Selection",
+                "Please select one or more agents to export."
+            )
+            return
+
+        # Get selected agent data
+        selected_agents_data = []
+        selected_remote_agents_data = []
+        
+        for item in selected_items:
+            agent_data = item.data(Qt.ItemDataRole.UserRole)
+            agent_type = agent_data.get("agent_type", "local")
+            
+            # Create a copy for export and remove UI-specific fields
+            export_data = agent_data.copy()
+            export_data.pop("agent_type", None)  # Remove UI-specific field
+            
+            if agent_type == "local":
+                selected_agents_data.append(export_data)
+            elif agent_type == "remote":
+                selected_remote_agents_data.append(export_data)
+
+        # Determine default filename
+        if len(selected_items) == 1:
+            agent_name = selected_items[0].data(Qt.ItemDataRole.UserRole).get("name", "agent")
+            default_filename = f"{agent_name}_export"
+        else:
+            default_filename = f"agents_export_{len(selected_items)}_agents"
+
+        # Open file dialog for export
+        file_dialog = QFileDialog(self)
+        file_dialog.setWindowTitle("Export Agent Configuration")
+        file_dialog.setFileMode(QFileDialog.FileMode.AnyFile)
+        file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        file_dialog.setNameFilter("TOML Files (*.toml);;JSON Files (*.json)")
+        file_dialog.selectFile(default_filename)
+
+        if not file_dialog.exec():
+            return
+
+        selected_files = file_dialog.selectedFiles()
+        if not selected_files:
+            return
+
+        export_file_path = selected_files[0]
+        selected_filter = file_dialog.selectedNameFilter()
+
+        # Determine file format based on selected filter or extension
+        if "toml" in selected_filter.lower() or export_file_path.lower().endswith('.toml'):
+            if not export_file_path.lower().endswith('.toml'):
+                export_file_path += '.toml'
+            file_format = "toml"
+        else:
+            if not export_file_path.lower().endswith('.json'):
+                export_file_path += '.json'
+            file_format = "json"
+
+        try:
+            # Create export configuration
+            export_config = {}
+            if selected_agents_data:
+                export_config["agents"] = selected_agents_data
+            if selected_remote_agents_data:
+                export_config["remote_agents"] = selected_remote_agents_data
+
+            # Write the file
+            with open(export_file_path, 'w', encoding='utf-8') as f:
+                if file_format == "toml":
+                    toml.dump(export_config, f)
+                else:
+                    json.dump(export_config, f, indent=2, ensure_ascii=False)
+
+            # Show success message
+            agent_count = len(selected_items)
+            agent_word = "agent" if agent_count == 1 else "agents"
+            QMessageBox.information(
+                self,
+                "Export Successful",
+                f"Successfully exported {agent_count} {agent_word} to:\n{export_file_path}"
+            )
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Export Error",
+                f"Failed to export agents:\n{str(e)}"
+            )
 
     def save_all_agents(self):
         """Save all agents to the configuration file."""
