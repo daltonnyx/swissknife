@@ -14,13 +14,13 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QScrollArea,
     QSplitter,
-    QMenu,  # Added
-    QStackedWidget,  # Added
-    QFileDialog,  # Added for file import
+    QMenu,
+    QStackedWidget,
+    QFileDialog,
 )
-import os  # Added for path operations
-import toml  # Added for TOML export functionality
-import json  # Added for JSON export functionality
+import os
+import toml
+import json
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDoubleValidator
 
@@ -54,6 +54,30 @@ class AgentsConfigTab(QWidget):
 
         self.init_ui()
         self.load_agents()
+
+    @staticmethod
+    def _determine_file_format_and_path(file_path: str, selected_filter: str) -> tuple[str, str]:
+        """
+        Determine file format and ensure correct file extension.
+        
+        Args:
+            file_path: The selected file path
+            selected_filter: The filter selected in the file dialog
+            
+        Returns:
+            Tuple of (final_file_path, file_format)
+        """
+        # Prioritize existing extension if present
+        if file_path.lower().endswith('.toml'):
+            return file_path, "toml"
+        elif file_path.lower().endswith('.json'):
+            return file_path, "json"
+        
+        # If no extension, use filter preference or default to JSON
+        if "toml" in selected_filter.lower():
+            return file_path + '.toml', "toml"
+        else:
+            return file_path + '.json', "json"
 
     def init_ui(self):
         """Initialize the UI components."""
@@ -89,12 +113,10 @@ class AgentsConfigTab(QWidget):
         add_local_action.triggered.connect(self.add_new_local_agent)
         add_remote_action.triggered.connect(self.add_new_remote_agent)
 
-        # Add Import button with green styling
         self.import_agents_btn = QPushButton("Import")
         self.import_agents_btn.setStyleSheet(style_provider.get_button_style("green"))
         self.import_agents_btn.clicked.connect(self.import_agents)
 
-        # Add Export button with blue styling
         self.export_agents_btn = QPushButton("Export")
         self.export_agents_btn.setStyleSheet(style_provider.get_button_style("primary"))
         self.export_agents_btn.clicked.connect(self.export_agents)
@@ -107,7 +129,7 @@ class AgentsConfigTab(QWidget):
 
         list_buttons_layout.addWidget(
             self.add_agent_menu_btn
-        )  # Changed from self.add_agent_btn
+        )
         list_buttons_layout.addWidget(self.import_agents_btn)
         list_buttons_layout.addWidget(self.export_agents_btn)
         list_buttons_layout.addWidget(self.remove_agent_btn)
@@ -147,7 +169,6 @@ class AgentsConfigTab(QWidget):
         self.temperature_input.setPlaceholderText("0.0 - 2.0")
         local_form_layout.addRow("Temperature:", self.temperature_input)
 
-        # Add enabled checkbox for local agents
         self.enabled_checkbox = QCheckBox("Enabled")
         self.enabled_checkbox.setChecked(True)  # Default to enabled
         local_form_layout.addRow("", self.enabled_checkbox)
@@ -181,7 +202,6 @@ class AgentsConfigTab(QWidget):
         self.remote_base_url_input.setPlaceholderText("e.g., http://localhost:8000")
         remote_form_layout.addRow("Base URL:", self.remote_base_url_input)
 
-        # Add enabled checkbox for remote agents
         self.remote_enabled_checkbox = QCheckBox("Enabled")
         self.remote_enabled_checkbox.setChecked(True)  # Default to enabled
         remote_form_layout.addRow("", self.remote_enabled_checkbox)
@@ -199,7 +219,6 @@ class AgentsConfigTab(QWidget):
         self.save_btn.clicked.connect(self.save_agent)
         self.save_btn.setEnabled(False)
 
-        # Add stacked widget and save button to editor_layout
         self.editor_layout.addWidget(self.editor_stacked_widget)  # Changed
         self.editor_layout.addWidget(self.save_btn)
         # self.editor_layout.addStretch() # Removed, stretch is within individual editors
@@ -220,23 +239,19 @@ class AgentsConfigTab(QWidget):
 
         right_panel.setWidget(editor_container_widget)  # Set the container widget
 
-        # Add panels to splitter
         splitter.addWidget(left_panel)
         splitter.addWidget(right_panel)
         splitter.setSizes([200, 600])  # Initial sizes
 
-        # Add splitter to main layout
         main_layout.addWidget(splitter)
         self.setLayout(main_layout)
 
-        # Disable editor initially
         self.set_editor_enabled(False)
 
     def load_agents(self):
         """Load agents from configuration."""
         self.agents_list.clear()
 
-        # Load local agents
         local_agents = self.agents_config.get("agents", [])
         for agent_conf in local_agents:
             item_data = agent_conf.copy()
@@ -245,7 +260,6 @@ class AgentsConfigTab(QWidget):
             item.setData(Qt.ItemDataRole.UserRole, item_data)
             self.agents_list.addItem(item)
 
-        # Load remote agents
         remote_agents = self.agents_config.get("remote_agents", [])
         for agent_conf in remote_agents:
             item_data = agent_conf.copy()
@@ -267,7 +281,6 @@ class AgentsConfigTab(QWidget):
         """Handle agent selection."""
         if current is None:
             self.set_editor_enabled(False)
-            # Note: button states are now handled by on_selection_changed
             # Optionally hide both editors or show a placeholder
             # self.editor_stacked_widget.setCurrentIndex(-1) # or a placeholder widget index
             return
@@ -277,9 +290,8 @@ class AgentsConfigTab(QWidget):
         agent_data = current.data(Qt.ItemDataRole.UserRole)
         agent_type = agent_data.get(
             "agent_type", "local"
-        )  # Default to local if type is missing
+        )
 
-        # Temporarily block signals
         all_editor_widgets = [
             self.name_input,
             self.description_input,
@@ -382,6 +394,7 @@ class AgentsConfigTab(QWidget):
             self.enabled_checkbox.setChecked(True)
             for checkbox in self.tool_checkboxes.values():
                 checkbox.setChecked(False)
+
             self.remote_name_input.clear()
             self.remote_base_url_input.clear()
             self.remote_enabled_checkbox.setChecked(True)
@@ -408,7 +421,6 @@ class AgentsConfigTab(QWidget):
         self.agents_list.setCurrentItem(item)  # Triggers on_agent_selected
 
         # on_agent_selected will switch to local editor and populate.
-        # Mark as dirty and enable save.
         self._is_dirty = True
         self.save_btn.setEnabled(True)
         self.name_input.setFocus()
@@ -429,7 +441,6 @@ class AgentsConfigTab(QWidget):
         self.agents_list.setCurrentItem(item)  # Triggers on_agent_selected
 
         # on_agent_selected will switch to remote editor and populate.
-        # Mark as dirty and enable save.
         self._is_dirty = True
         self.save_btn.setEnabled(True)
         self.remote_name_input.setFocus()
@@ -624,7 +635,6 @@ class AgentsConfigTab(QWidget):
                 f"How would you like to proceed?"
             )
 
-            # Add custom buttons
             override_btn = message_box.addButton(
                 "Override", QMessageBox.ButtonRole.AcceptRole
             )
@@ -640,7 +650,7 @@ class AgentsConfigTab(QWidget):
                 user_choice = "import_all"
             elif clicked_button == skip_btn:
                 user_choice = "skip_conflicts"
-            else:  # cancel_btn or close
+            else:
                 user_choice = "cancel"
 
         if user_choice == "cancel":
@@ -660,15 +670,12 @@ class AgentsConfigTab(QWidget):
             if not name:
                 continue
 
-            # Check if this is a conflict
             is_conflict = name in existing_agent_names
 
             if is_conflict and user_choice == "skip_conflicts":
                 skipped_count += 1
                 continue
 
-            # If we're here, we're importing this agent
-            # Remove any existing agent with the same name
             if is_conflict:
                 current_local_agents = [
                     a for a in current_local_agents if a.get("name") != name
@@ -677,29 +684,23 @@ class AgentsConfigTab(QWidget):
                     a for a in current_remote_agents if a.get("name") != name
                 ]
 
-            # Add the imported agent
-            # Make sure the 'enabled' field is present (for backward compatibility)
             if "enabled" not in imported_agent:
                 imported_agent["enabled"] = True
 
             current_local_agents.append(imported_agent)
             imported_count += 1
 
-        # Process remote agents
         for imported_agent in remote_agents:
             name = imported_agent.get("name", "")
             if not name:
                 continue
 
-            # Check if this is a conflict
             is_conflict = name in existing_agent_names
 
             if is_conflict and user_choice == "skip_conflicts":
                 skipped_count += 1
                 continue
 
-            # If we're here, we're importing this agent
-            # Remove any existing agent with the same name
             if is_conflict:
                 current_local_agents = [
                     a for a in current_local_agents if a.get("name") != name
@@ -708,8 +709,6 @@ class AgentsConfigTab(QWidget):
                     a for a in current_remote_agents if a.get("name") != name
                 ]
 
-            # Add the imported agent
-            # Make sure the 'enabled' field is present (for backward compatibility)
             if "enabled" not in imported_agent:
                 imported_agent["enabled"] = True
 
@@ -730,7 +729,6 @@ class AgentsConfigTab(QWidget):
             if index >= 0:
                 self.agents_list.setCurrentRow(index)
 
-        # Show success message
         status_message = f"Successfully imported {imported_count} agent(s)."
         if skipped_count > 0:
             status_message += f" Skipped {skipped_count} agent(s) due to conflicts."
@@ -748,7 +746,6 @@ class AgentsConfigTab(QWidget):
             )
             return
 
-        # Get selected agent data
         selected_agents_data = []
         selected_remote_agents_data = []
         
@@ -756,23 +753,20 @@ class AgentsConfigTab(QWidget):
             agent_data = item.data(Qt.ItemDataRole.UserRole)
             agent_type = agent_data.get("agent_type", "local")
             
-            # Create a copy for export and remove UI-specific fields
             export_data = agent_data.copy()
-            export_data.pop("agent_type", None)  # Remove UI-specific field
+            export_data.pop("agent_type", None)
             
             if agent_type == "local":
                 selected_agents_data.append(export_data)
             elif agent_type == "remote":
                 selected_remote_agents_data.append(export_data)
 
-        # Determine default filename
         if len(selected_items) == 1:
             agent_name = selected_items[0].data(Qt.ItemDataRole.UserRole).get("name", "agent")
             default_filename = f"{agent_name}_export"
         else:
             default_filename = f"agents_export_{len(selected_items)}_agents"
 
-        # Open file dialog for export
         file_dialog = QFileDialog(self)
         file_dialog.setWindowTitle("Export Agent Configuration")
         file_dialog.setFileMode(QFileDialog.FileMode.AnyFile)
@@ -790,32 +784,23 @@ class AgentsConfigTab(QWidget):
         export_file_path = selected_files[0]
         selected_filter = file_dialog.selectedNameFilter()
 
-        # Determine file format based on selected filter or extension
-        if "toml" in selected_filter.lower() or export_file_path.lower().endswith('.toml'):
-            if not export_file_path.lower().endswith('.toml'):
-                export_file_path += '.toml'
-            file_format = "toml"
-        else:
-            if not export_file_path.lower().endswith('.json'):
-                export_file_path += '.json'
-            file_format = "json"
+        export_file_path, file_format = self._determine_file_format_and_path(
+            export_file_path, selected_filter
+        )
 
         try:
-            # Create export configuration
             export_config = {}
             if selected_agents_data:
                 export_config["agents"] = selected_agents_data
             if selected_remote_agents_data:
                 export_config["remote_agents"] = selected_remote_agents_data
 
-            # Write the file
             with open(export_file_path, 'w', encoding='utf-8') as f:
                 if file_format == "toml":
                     toml.dump(export_config, f)
                 else:
                     json.dump(export_config, f, indent=2, ensure_ascii=False)
 
-            # Show success message
             agent_count = len(selected_items)
             agent_word = "agent" if agent_count == 1 else "agents"
             QMessageBox.information(
@@ -840,11 +825,10 @@ class AgentsConfigTab(QWidget):
             item = self.agents_list.item(i)
             agent_data = item.data(Qt.ItemDataRole.UserRole)
 
-            # Create a copy for saving, remove UI-specific 'agent_type'
             config_data = agent_data.copy()
             agent_type_for_sorting = config_data.pop(
                 "agent_type", "local"
-            )  # Default to local if missing
+            )
 
             if agent_type_for_sorting == "local":
                 local_agents_list.append(config_data)
