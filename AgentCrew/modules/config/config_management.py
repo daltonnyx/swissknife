@@ -426,7 +426,7 @@ class ConfigManagement:
             config_data: The configuration data to write.
         """
         mcp_config_path = os.getenv(
-            "MCP_CONFIG_PATH", os.path.expanduser("./mcp_server.json")
+            "MCP_CONFIG_PATH", os.path.expanduser("./mcp_servers.json")
         )
         try:
             # Create directory if it doesn't exist
