@@ -70,6 +70,15 @@ class KeyboardHandler:
                 )
             QTextEdit.keyPressEvent(self.chat_window.message_input, event)
 
+        # Ctrl+Enter to send
+        elif (
+            event.key() == Qt.Key.Key_Return
+            and event.modifiers() == Qt.KeyboardModifier.ControlModifier
+        ):
+            self.chat_window.send_message()
+            event.accept()
+            return
+
         # Handle Enter key for completion
         elif event.key() == Qt.Key.Key_Return:
             # Select the current completion
@@ -83,14 +92,6 @@ class KeyboardHandler:
                 )
             QTextEdit.keyPressEvent(self.chat_window.message_input, event)
 
-        # Ctrl+Enter to send
-        elif (
-            event.key() == Qt.Key.Key_Return
-            and event.modifiers() == Qt.KeyboardModifier.ControlModifier
-        ):
-            self.chat_window.send_message()
-            event.accept()
-            return
 
         # Up arrow to navigate history
         elif (
