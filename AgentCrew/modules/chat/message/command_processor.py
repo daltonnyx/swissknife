@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict, Any, Union
 import os
 
 from AgentCrew.modules.agents.local_agent import LocalAgent
@@ -438,39 +438,94 @@ class CommandProcessor:
             )
 
     def _handle_file_command(self, user_input: str) -> CommandResult:
-        """Handle file command."""
-        file_path = user_input[6:].strip()
-        file_path = os.path.expanduser(file_path)
+        # Remove the command prefix "/file " and strip whitespace
+        file_paths_str: str = user_input[6:].strip()
+        
+        # Handle empty input
+        if not file_paths_str:
+            self.message_handler._notify("error", "Usage: /file <file_path1> [file_path2] ...")
+            return CommandResult(handled=True, clear_flag=True)
+        
+        # Split file paths and expand user paths
+        file_paths: List[str] = [os.path.expanduser(path.strip()) for path in file_paths_str.split()]
+        
+        # Remove empty paths
+        file_paths = [path for path in file_paths if path]
+        
+        if not file_paths:
+            self.message_handler._notify("error", "No valid file paths provided")
+            return CommandResult(handled=True, clear_flag=True)
 
-        self.message_handler._notify("file_processing", {"file_path": file_path})
-
-        # Process file with the file handling service
+        # Initialize file handler if needed
         if self.message_handler.file_handler is None:
             self.message_handler.file_handler = FileHandler()
-        file_content = self.message_handler.file_handler.process_file(file_path)
-        # Fallback to llm handle
-        if not file_content:
-            from AgentCrew.modules.agents.base import MessageType
 
-            file_content = self.message_handler.agent.format_message(
-                MessageType.FileContent, {"file_uri": file_path}
-            )
+        processed_files: List[str] = []
+        failed_files: List[str] = []
+        file_contents: List[str] = []
 
-        if file_content:
-            self.message_handler._messages_append(
-                {"role": "user", "content": [file_content]}
-            )
-            self.message_handler._notify(
-                "file_processed",
-                {
-                    "file_path": file_path,
-                    "message": self.message_handler.agent.history[-1],
-                },
-            )
-            return CommandResult(handled=True, clear_flag=True)
+        # Process each file
+        for file_path in file_paths:
+            # Process file with the file handling service
+            file_content: Optional[Union[Dict[str, Any], str]] = self.message_handler.file_handler.process_file(file_path)
+            
+            # Fallback to llm handle
+            if not file_content:
+                from AgentCrew.modules.agents.base import MessageType
+                file_content = self.message_handler.agent.format_message(
+                    MessageType.FileContent, {"file_uri": file_path}
+                )
+
+            if file_content:
+                # Extract text content from the result
+                content_text: str
+                if isinstance(file_content, dict) and "text" in file_content:
+                    content_text = file_content["text"]
+                elif isinstance(file_content, str):
+                    content_text = file_content
+                else:
+                    # Handle unexpected format
+                    content_text = str(file_content)
+                
+                file_contents.append(content_text)
+                processed_files.append(file_path)
+                # Notify using the correct format that matches ConsoleUI.listen()
+                self.message_handler._notify("file_processed", {"file_path": file_path})
+            else:
+                failed_files.append(file_path)
+                self.message_handler._notify(
+                    "error",
+                    f"Failed to process file {file_path} or model is not supported",
+                )
+
+        # Add all successfully processed files to the conversation
+        if file_contents:
+            # Create a single message with all file contents using XML-style boundaries
+            combined_content: str
+            if len(file_contents) == 1:
+                # Single file - wrap in XML tags for consistency
+                file_path = processed_files[0]
+                combined_content = f"<file path='{file_path}'>\n{file_contents[0]}\n</file>"
+            else:
+                # Multiple files - use XML-style boundaries for each file
+                combined_parts: List[str] = []
+                for i, content in enumerate(file_contents):
+                    file_path = processed_files[i]
+                    combined_parts.append(f"<file path='{file_path}'>\n{content}\n</file>")
+                combined_content = "\n\n".join(combined_parts)
+            
+            message_content: Dict[str, Any] = {"role": "user", "content": [{"type": "text", "text": combined_content}]}
+            self.message_handler._messages_append(message_content)
+            
+        # Send summary message
+        summary: str
+        if processed_files and failed_files:
+            summary = f"Processed {len(processed_files)} files successfully, {len(failed_files)} failed"
+        elif processed_files:
+            summary = f"Successfully processed {len(processed_files)} file(s)"
         else:
-            self.message_handler._notify(
-                "error",
-                f"Failed to process file {file_path} Or Model is not supported",
-            )
-            return CommandResult(handled=True, clear_flag=True)
+            summary = f"Failed to process all {len(failed_files)} file(s)"
+            
+        self.message_handler._notify("system_message", summary)
+
+        return CommandResult(handled=True, clear_flag=True)
