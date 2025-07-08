@@ -230,16 +230,17 @@ class ConfigManagement:
     def read_global_config_data(self) -> Dict[str, Any]:
         """Reads data from the global config.json file."""
         config_path = self._get_global_config_file_path()
+        default_config = {"api_keys": {}, "auto_approval_tools": [], "global_settings": {"theme": "dark", "yolo_mode": False}}
         try:
             if not os.path.exists(config_path):
-                return {"api_keys": {}, "auto_approval_tools": []}  # Default structure if file doesn't exist
+                return default_config
             with open(config_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if not isinstance(data, dict):
                     logger.warning(
                         f"Warning: Global config file {config_path} does not contain a valid JSON object. Returning default."
                     )
-                    return {"api_keys": {}, "auto_approval_tools": []}
+                    return default_config
                 # Ensure api_keys key exists and is a dict
                 if "api_keys" not in data or not isinstance(data.get("api_keys"), dict):
                     data["api_keys"] = {}
@@ -250,12 +251,12 @@ class ConfigManagement:
             logger.warning(
                 f"Warning: Error decoding global config file {config_path}. Returning default config."
             )
-            return {"api_keys": {}, "auto_approval_tools": []}
+            return default_config
         except Exception as e:
             logger.warning(
                 f"Warning: Could not read global config file {config_path}: {e}. Returning default config."
             )
-            return {"api_keys": {}, "auto_approval_tools": []}
+            return default_config
 
     def write_global_config_data(self, config_data: Dict[str, Any]) -> None:
         """Writes data to the global config.json file."""
