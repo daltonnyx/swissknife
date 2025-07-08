@@ -483,7 +483,6 @@ class ConsoleUI(Observer):
                 self.console.print(approved_text)
                 break
             elif response in ["f", "forever"]:
-                # Add tool to persistent auto-approval list
                 from AgentCrew.modules.config import ConfigManagement
                 config_manager = ConfigManagement()
                 config_manager.write_auto_approval_tools(tool_use["name"], add=True)

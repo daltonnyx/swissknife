@@ -249,5 +249,4 @@ class ToolManager:
 
     def reset_approved_tools(self):
         """Reset approved tools for a new conversation."""
-        # Reload persistent tools from config and reset session-based approvals
         self._auto_approved_tools = self._load_persistent_auto_approved_tools()
