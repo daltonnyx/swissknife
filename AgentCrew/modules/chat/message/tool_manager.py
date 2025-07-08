@@ -9,11 +9,6 @@ from AgentCrew.modules.llm.message import MessageTransformer
 class ToolManager:
     """Manages tool execution and confirmation."""
 
-    def _load_persistent_auto_approved_tools(self):
-        """Load persistent auto-approved tools from config."""
-        config_manager = ConfigManagement()
-        return set(config_manager.get_auto_approval_tools())
-
     def __init__(self, message_handler):
         from AgentCrew.modules.chat.message import MessageHandler
 
@@ -25,6 +20,11 @@ class ToolManager:
         self._pending_confirmations = {}  # Store futures for confirmation requests
         self._next_confirmation_id = 0  # ID counter for confirmation requests
         self.yolo_mode = False  # Enable/disable auto-approval mode
+
+    def _load_persistent_auto_approved_tools(self):
+        """Load persistent auto-approved tools from config."""
+        config_manager = ConfigManagement()
+        return set(config_manager.get_auto_approval_tools())
 
     async def execute_tool(self, tool_use: Dict[str, Any]):
         """Execute a tool with proper confirmation flow."""
