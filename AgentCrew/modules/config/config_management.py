@@ -243,7 +243,6 @@ class ConfigManagement:
                 # Ensure api_keys key exists and is a dict
                 if "api_keys" not in data or not isinstance(data.get("api_keys"), dict):
                     data["api_keys"] = {}
-                # Ensure auto_approval_tools key exists and is a list
                 if "auto_approval_tools" not in data or not isinstance(data.get("auto_approval_tools"), list):
                     data["auto_approval_tools"] = []
                 return data

@@ -20,7 +20,6 @@ class ToolManager:
         if isinstance(message_handler, MessageHandler):
             self.message_handler = message_handler
 
-        # Load persistent auto-approved tools from config
         self._auto_approved_tools = self._load_persistent_auto_approved_tools()
 
         self._pending_confirmations = {}  # Store futures for confirmation requests
@@ -71,7 +70,6 @@ class ToolManager:
                 )
             return
 
-        # For all other tools, check if confirmation is needed
         if not self.yolo_mode and tool_name not in self._auto_approved_tools:
             # Request confirmation from the user
             confirmation = await self._wait_for_tool_confirmation(tool_use)
