@@ -232,28 +232,31 @@ class ConfigManagement:
         config_path = self._get_global_config_file_path()
         try:
             if not os.path.exists(config_path):
-                return {"api_keys": {}}  # Default structure if file doesn't exist
+                return {"api_keys": {}, "auto_approval_tools": []}  # Default structure if file doesn't exist
             with open(config_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if not isinstance(data, dict):
                     logger.warning(
                         f"Warning: Global config file {config_path} does not contain a valid JSON object. Returning default."
                     )
-                    return {"api_keys": {}}
+                    return {"api_keys": {}, "auto_approval_tools": []}
                 # Ensure api_keys key exists and is a dict
                 if "api_keys" not in data or not isinstance(data.get("api_keys"), dict):
                     data["api_keys"] = {}
+                # Ensure auto_approval_tools key exists and is a list
+                if "auto_approval_tools" not in data or not isinstance(data.get("auto_approval_tools"), list):
+                    data["auto_approval_tools"] = []
                 return data
         except json.JSONDecodeError:
             logger.warning(
                 f"Warning: Error decoding global config file {config_path}. Returning default config."
             )
-            return {"api_keys": {}}
+            return {"api_keys": {}, "auto_approval_tools": []}
         except Exception as e:
             logger.warning(
                 f"Warning: Could not read global config file {config_path}: {e}. Returning default config."
             )
-            return {"api_keys": {}}
+            return {"api_keys": {}, "auto_approval_tools": []}
 
     def write_global_config_data(self, config_data: Dict[str, Any]) -> None:
         """Writes data to the global config.json file."""
@@ -561,3 +564,36 @@ class ConfigManagement:
         """
         last_used = self.get_last_used_settings()
         return last_used.get("agent")
+
+    def get_auto_approval_tools(self) -> List[str]:
+        """
+        Get the list of auto-approved tools from global config.
+
+        Returns:
+            List of tool names that are auto-approved.
+        """
+        global_config = self.read_global_config_data()
+        return global_config.get("auto_approval_tools", [])
+
+    def write_auto_approval_tools(self, tool_name: str, add: bool = True) -> None:
+        """
+        Add or remove a tool from the auto-approval list in global config.
+
+        Args:
+            tool_name: Name of the tool to add/remove from auto-approval list.
+            add: True to add the tool, False to remove it.
+        """
+        try:
+            global_config = self.read_global_config_data()
+            auto_approval_tools = global_config.get("auto_approval_tools", [])
+
+            if add and tool_name not in auto_approval_tools:
+                auto_approval_tools.append(tool_name)
+            elif not add and tool_name in auto_approval_tools:
+                auto_approval_tools.remove(tool_name)
+
+            global_config["auto_approval_tools"] = auto_approval_tools
+            self.write_global_config_data(global_config)
+        except Exception as e:
+            action = "add" if add else "remove"
+            logger.warning(f"Warning: Failed to {action} tool {tool_name} from auto-approval list: {e}")

@@ -2,18 +2,27 @@ from typing import Dict, Any
 import asyncio
 
 from AgentCrew.modules import logger
+from AgentCrew.modules.config import ConfigManagement
 from AgentCrew.modules.llm.message import MessageTransformer
 
 
 class ToolManager:
     """Manages tool execution and confirmation."""
 
+    def _load_persistent_auto_approved_tools(self):
+        """Load persistent auto-approved tools from config."""
+        config_manager = ConfigManagement()
+        return set(config_manager.get_auto_approval_tools())
+
     def __init__(self, message_handler):
         from AgentCrew.modules.chat.message import MessageHandler
 
         if isinstance(message_handler, MessageHandler):
             self.message_handler = message_handler
-        self._auto_approved_tools = set()  # Track tools approved for all future calls
+
+        # Load persistent auto-approved tools from config
+        self._auto_approved_tools = self._load_persistent_auto_approved_tools()
+
         self._pending_confirmations = {}  # Store futures for confirmation requests
         self._next_confirmation_id = 0  # ID counter for confirmation requests
         self.yolo_mode = False  # Enable/disable auto-approval mode
@@ -242,4 +251,5 @@ class ToolManager:
 
     def reset_approved_tools(self):
         """Reset approved tools for a new conversation."""
-        self._auto_approved_tools = set()
+        # Reload persistent tools from config and reset session-based approvals
+        self._auto_approved_tools = self._load_persistent_auto_approved_tools()
