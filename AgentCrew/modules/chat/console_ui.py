@@ -451,7 +451,7 @@ class ConsoleUI(Observer):
             # Use Rich to print the prompt but still need to use input() for user interaction
             self.console.print(
                 Text(
-                    "\nAllow this tool to run? [y]es/[n]o/[all] future calls: ",
+                    "\nAllow this tool to run? [y]es/[n]o/[a]ll in this session/[f]orever (this and future sessions): ",
                     style=RICH_STYLE_YELLOW,
                 ),
                 end="",
@@ -471,20 +471,31 @@ class ConsoleUI(Observer):
                     confirmation_id, {"action": "deny"}
                 )
                 break
-            elif response in ["all", "a"]:
+            elif response in ["a", "all"]:
                 self.message_handler.resolve_tool_confirmation(
                     confirmation_id, {"action": "approve_all"}
                 )
                 approved_text = Text(
-                    "✓ Approved all future calls to '", style=RICH_STYLE_YELLOW
+                    f"✓ Approved all future calls to '{tool_use['name']}' for this session.", style=RICH_STYLE_YELLOW
                 )
-                approved_text.append(tool_use["name"])
-                approved_text.append("' for this session.")
                 self.console.print(approved_text)
+                break
+            elif response in ["f", "forever"]:
+                from AgentCrew.modules.config import ConfigManagement
+                config_manager = ConfigManagement()
+                config_manager.write_auto_approval_tools(tool_use["name"], add=True)
+
+                self.message_handler.resolve_tool_confirmation(
+                    confirmation_id, {"action": "approve_all"}
+                )
+                saved_text = Text(
+                    f"✓ Tool '{tool_use['name']}' will be auto-approved forever.", style=RICH_STYLE_YELLOW
+                )
+                self.console.print(saved_text)
                 break
             else:
                 self.console.print(
-                    Text("Please enter 'y', 'n', or 'all'.", style=RICH_STYLE_YELLOW)
+                    Text("Please enter 'y', 'n', 'a', or 'f'.", style=RICH_STYLE_YELLOW)
                 )
         self._start_input_thread()
 

@@ -2,6 +2,7 @@ from typing import Dict, Any
 import asyncio
 
 from AgentCrew.modules import logger
+from AgentCrew.modules.config import ConfigManagement
 from AgentCrew.modules.llm.message import MessageTransformer
 
 
@@ -13,10 +14,17 @@ class ToolManager:
 
         if isinstance(message_handler, MessageHandler):
             self.message_handler = message_handler
-        self._auto_approved_tools = set()  # Track tools approved for all future calls
+
+        self._auto_approved_tools = self._load_persistent_auto_approved_tools()
+
         self._pending_confirmations = {}  # Store futures for confirmation requests
         self._next_confirmation_id = 0  # ID counter for confirmation requests
         self.yolo_mode = False  # Enable/disable auto-approval mode
+
+    def _load_persistent_auto_approved_tools(self):
+        """Load persistent auto-approved tools from config."""
+        config_manager = ConfigManagement()
+        return set(config_manager.get_auto_approval_tools())
 
     async def execute_tool(self, tool_use: Dict[str, Any]):
         """Execute a tool with proper confirmation flow."""
@@ -62,7 +70,6 @@ class ToolManager:
                 )
             return
 
-        # For all other tools, check if confirmation is needed
         if not self.yolo_mode and tool_name not in self._auto_approved_tools:
             # Request confirmation from the user
             confirmation = await self._wait_for_tool_confirmation(tool_use)
@@ -242,4 +249,4 @@ class ToolManager:
 
     def reset_approved_tools(self):
         """Reset approved tools for a new conversation."""
-        self._auto_approved_tools = set()
+        self._auto_approved_tools = self._load_persistent_auto_approved_tools()
