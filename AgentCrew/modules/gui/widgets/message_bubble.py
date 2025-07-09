@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QFileInfo, QByteArray, QTimer
 from PySide6.QtGui import QPixmap, QTextDocument, QTextCursor
+import qtawesome as qta
 import pyperclip
 
 from AgentCrew.modules.gui.themes import StyleProvider
@@ -162,9 +163,9 @@ class MessageBubble(QFrame):
             self.setMouseTracking(True)
 
             # Create rollback button with icon only
-            rollback_button = QPushButton(
-                "↶", self
-            )  # Anticlockwise gapped circle arrow (more standard rollback icon)
+            rollback_icon = qta.icon("fa6s.clock-rotate-left", color="white")
+
+            rollback_button = QPushButton(rollback_icon, "", self)
             rollback_button.setToolTip("Rollback to this message")
             rollback_font = rollback_button.font()
             rollback_font.setPixelSize(12)
@@ -177,7 +178,10 @@ class MessageBubble(QFrame):
 
         if not self.is_consolidated:
             # Create consolidated button with icon only
-            consolidated_button = QPushButton("✨", self)  # Pin/bookmark icon
+            consolidated_icon = qta.icon("fa6s.wand-magic-sparkles", color="white")
+            consolidated_button = QPushButton(
+                consolidated_icon, "", self
+            )  # Pin/bookmark icon
             consolidated_font = consolidated_button.font()
             consolidated_font.setPixelSize(9)
             consolidated_button.setFont(consolidated_font)

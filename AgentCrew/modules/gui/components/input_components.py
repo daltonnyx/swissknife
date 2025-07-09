@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QStringListModel
 from PySide6.QtGui import QTextCursor
+import qtawesome as qta
 from AgentCrew.modules.chat.completers import DirectoryListingCompleter
 from .completers import GuiChatCompleter
 
@@ -51,14 +52,16 @@ class InputComponents:
         buttons_layout.setContentsMargins(0, 0, 5, 0)
 
         # Create Send button
-        self.chat_window.send_button = QPushButton("▶")
+        send_icon = qta.icon("fa6s.paper-plane", color="white")
+        self.chat_window.send_button = QPushButton(send_icon, "")
         self.chat_window.send_button.setFont(input_font)
         self.chat_window.send_button.setStyleSheet(
             self.chat_window.style_provider.get_button_style("primary")
         )
 
         # Create File button
-        self.chat_window.file_button = QPushButton("📎")
+        upload_icon = qta.icon("fa6s.arrow-up-from-bracket", color="white")
+        self.chat_window.file_button = QPushButton(upload_icon, "")
         self.chat_window.file_button.setFont(input_font)
         self.chat_window.file_button.setStyleSheet(
             self.chat_window.style_provider.get_button_style("secondary")

@@ -169,8 +169,8 @@ QPushButton:disabled {
 
     SECONDARY_BUTTON = """
 QPushButton {
-    background-color: #e0e0e0; /* Light gray */
-    color: #333333; /* Dark gray text */
+    background-color: #a0a0a0; /* Light gray */
+    color: #ffffff; /* Dark gray text */
     border: none;
     border-radius: 4px; 
     padding: 8px;

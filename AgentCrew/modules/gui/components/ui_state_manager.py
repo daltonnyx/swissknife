@@ -1,4 +1,6 @@
 from PySide6.QtCore import QTimer
+import qtawesome as qta
+from qtpy.QtGui import QIcon
 
 
 class UIStateManager:
@@ -65,7 +67,10 @@ class UIStateManager:
         # If enabling controls, make sure we reset the send button
         if not is_stop_stated:
             self.animation_timer.stop()
-            self.chat_window.send_button.setText("▶")
+
+            send_icon = qta.icon("fa6s.paper-plane", color="white")
+            self.chat_window.send_button.setIcon(send_icon)
+            self.chat_window.send_button.setText("")
             self.chat_window.send_button.setStyleSheet(
                 self.chat_window.style_provider.get_button_style("primary")
             )
@@ -77,6 +82,7 @@ class UIStateManager:
             self.chat_window.send_button.clicked.connect(self.chat_window.send_message)
         else:
             # Change button to stop functionality
+            self.chat_window.send_button.setIcon(QIcon())
             self.chat_window.send_button.setText(f"{self.spinner_chars[-1]}")
             self.chat_window.send_button.setStyleSheet(
                 self.chat_window.style_provider.get_button_style("stop")

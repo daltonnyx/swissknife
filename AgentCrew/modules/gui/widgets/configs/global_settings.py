@@ -5,16 +5,35 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QGroupBox,
+    QStyle,
     QFormLayout,
     QMessageBox,
     QScrollArea,
     QComboBox,
+    QProxyStyle,
     QCheckBox,
 )
 from PySide6.QtCore import Signal
 
 from AgentCrew.modules.config import ConfigManagement
 from AgentCrew.modules.gui.themes import StyleProvider
+
+
+class CustomPasswordStyle(QProxyStyle):
+    """
+    A custom QStyle to change the password character in QLineEdit.
+    """
+
+    def __init__(self, style=None):
+        super().__init__(style)
+
+    def styleHint(self, hint, option=None, widget=None, returnData=None):
+        """
+        Overrides the default password character for QLineEdit.
+        """
+        if hint == QStyle.StyleHint.SH_LineEdit_PasswordCharacter:
+            return ord("•")
+        return super().styleHint(hint, option, widget, returnData)
 
 
 class SettingsTab(QWidget):
@@ -121,6 +140,7 @@ class SettingsTab(QWidget):
             label = QLabel(item["label"])
             line_edit = QLineEdit()
             line_edit.setEchoMode(QLineEdit.EchoMode.Password)
+            line_edit.setStyle(CustomPasswordStyle(line_edit.style()))
             line_edit.setPlaceholderText(item["placeholder"])
             self.api_key_inputs[item["key_name"]] = line_edit
             api_keys_form_layout.addRow(label, line_edit)
