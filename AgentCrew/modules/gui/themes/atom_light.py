@@ -436,13 +436,18 @@ QMenu::item {
     padding: 8px 24px 8px 12px;
     border-radius: 4px;
     margin: 2px;
+    color: #333333; /* Dark text for better visibility */
 }
 QMenu::item:selected {
     background-color: #4285f4; /* Blue selection */
-    color: #ffffff; /* White text */
+    color: #ffffff; /* White text for selected items */
 }
 QMenu::item:pressed {
     background-color: #3367d6; /* Darker blue */
+}
+QMenu::item:disabled {
+    background-color: transparent;
+    color: #999999; /* Light gray - muted color for disabled items */
 }
 QMenu::separator {
     height: 1px;

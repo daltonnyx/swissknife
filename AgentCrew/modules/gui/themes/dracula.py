@@ -453,13 +453,18 @@ QMenu::item {
     padding: 8px 24px 8px 12px;
     border-radius: 4px;
     margin: 2px;
+    color: #F8F8F2; /* Brighter text color for better visibility */
 }
 QMenu::item:selected {
     background-color: #BD93F9; /* Dracula Purple */
-    color: #F8F8F2; /* Dracula Foreground */
+    color: #ffffff; /* Pure white for selected items */
 }
 QMenu::item:pressed {
     background-color: #FF79C6; /* Dracula Pink */
+}
+QMenu::item:disabled {
+    background-color: transparent;
+    color: #6272A4; /* Dracula Comment - muted color for disabled items */
 }
 QMenu::separator {
     height: 1px;

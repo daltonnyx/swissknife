@@ -446,13 +446,18 @@ QMenu::item {
     padding: 8px 24px 8px 12px;
     border-radius: 4px;
     margin: 2px;
+    color: #eceff4; /* Brighter text color for better visibility */
 }
 QMenu::item:selected {
     background-color: #5e81ac; /* Nord Frost 3 */
-    color: #eceff4; /* Nord Snow Storm 2 */
+    color: #ffffff; /* Pure white for selected items */
 }
 QMenu::item:pressed {
     background-color: #81a1c1; /* Nord Frost 2 */
+}
+QMenu::item:disabled {
+    background-color: transparent;
+    color: #4c566a; /* Nord Polar Night 3 - muted color for disabled items */
 }
 QMenu::separator {
     height: 1px;

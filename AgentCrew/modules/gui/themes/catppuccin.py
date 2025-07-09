@@ -438,13 +438,18 @@ QMenu::item {
     padding: 8px 24px 8px 12px;
     border-radius: 4px;
     margin: 2px;
+    color: #f8f8f2; /* Brighter text color for better visibility */
 }
 QMenu::item:selected {
     background-color: #45475a; /* Catppuccin Surface1 */
-    color: #b4befe; /* Catppuccin Lavender */
+    color: #ffffff; /* Pure white for selected items */
 }
 QMenu::item:pressed {
     background-color: #585b70; /* Catppuccin Surface2 */
+}
+QMenu::item:disabled {
+    background-color: transparent;
+    color: #6c7086; /* Catppuccin Overlay0 - muted color for disabled items */
 }
 QMenu::separator {
     height: 1px;
