@@ -148,6 +148,7 @@ class ToolEventHandler:
         yes_button = dialog.addButton("Yes (Once)", QMessageBox.ButtonRole.YesRole)
         no_button = dialog.addButton("No", QMessageBox.ButtonRole.NoRole)
         all_button = dialog.addButton("Yes to All", QMessageBox.ButtonRole.AcceptRole)
+        forever_button = dialog.addButton("Forever", QMessageBox.ButtonRole.AcceptRole)
 
         # Style the buttons with Catppuccin colors
         yes_button.setStyleSheet(
@@ -155,6 +156,10 @@ class ToolEventHandler:
         )
 
         all_button.setStyleSheet(
+            self.chat_window.style_provider.get_tool_dialog_all_button_style()
+        )
+
+        forever_button.setStyleSheet(
             self.chat_window.style_provider.get_tool_dialog_all_button_style()
         )
 
@@ -180,6 +185,18 @@ class ToolEventHandler:
             )
             self.chat_window.display_status_message(
                 f"Approved all future calls to tool: {tool_use['name']}"
+            )
+        elif clicked_button == forever_button:
+            from AgentCrew.modules.config import ConfigManagement
+
+            config_manager = ConfigManagement()
+            config_manager.write_auto_approval_tools(tool_use["name"], add=True)
+
+            self.chat_window.message_handler.resolve_tool_confirmation(
+                confirmation_id, {"action": "approve_all"}
+            )
+            self.chat_window.display_status_message(
+                f"Tool '{tool_use['name']}' will be auto-approved forever"
             )
         else:  # No or dialog closed
             self.chat_window.message_handler.resolve_tool_confirmation(
