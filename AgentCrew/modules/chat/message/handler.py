@@ -88,14 +88,12 @@ class MessageHandler(Observable):
         Returns:
             Tuple of (exit_flag, clear_flag)
         """
+        self.history_manager.add_entry(user_input)
+
         # Process commands first
         command_result = await self.command_processor.process_command(user_input)
         if command_result.handled:
             return command_result.exit_flag, command_result.clear_flag
-
-        # Store non-command messages in history
-        if not user_input.startswith("/"):
-            self.history_manager.add_entry(user_input)
 
         # Handle regular user input (non-commands)
         # RAG base on user query
