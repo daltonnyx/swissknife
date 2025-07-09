@@ -135,12 +135,13 @@ class SettingsTab(QWidget):
         api_keys_group = QGroupBox("API Keys")
         api_keys_group.setStyleSheet(style_provider.get_api_keys_group_style())
         api_keys_form_layout = QFormLayout()
+        custom_style = CustomPasswordStyle()
 
         for item in self.API_KEY_DEFINITIONS:
             label = QLabel(item["label"])
             line_edit = QLineEdit()
             line_edit.setEchoMode(QLineEdit.EchoMode.Password)
-            line_edit.setStyle(CustomPasswordStyle(line_edit.style()))
+            line_edit.setStyle(custom_style)
             line_edit.setPlaceholderText(item["placeholder"])
             self.api_key_inputs[item["key_name"]] = line_edit
             api_keys_form_layout.addRow(label, line_edit)
