@@ -11,9 +11,11 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QFileIconProvider,
     QScrollArea,
+    QMenu,
 )
 from PySide6.QtCore import Qt, QFileInfo, QByteArray, QTimer
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QTextDocument, QTextCursor
+import pyperclip
 
 from AgentCrew.modules.gui.themes import StyleProvider
 
@@ -138,6 +140,10 @@ class MessageBubble(QFrame):
         if text:
             self.raw_text = text
             self.set_text(text)
+
+        # Setup context menu
+        self.message_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.message_label.customContextMenuRequested.connect(self.show_context_menu)
 
         # self.message_label.setSizePolicy(
         #     QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
@@ -267,6 +273,103 @@ class MessageBubble(QFrame):
                 original_resize_event(event)
 
         self.resizeEvent = resize_event_wrapper
+
+    def show_context_menu(self, position):
+        """Create and show context menu with standard text actions plus Copy as Markdown."""
+        menu = QMenu(self)
+
+        copy_action = menu.addAction("Copy as plain text")
+        copy_action.triggered.connect(self._copy_selected_text)
+
+        copy_html_action = menu.addAction("Copy as HTML")
+        copy_html_action.triggered.connect(self._copy_selected_html)
+
+        if not self.message_label.hasSelectedText():
+            copy_html_action.setEnabled(False)
+            copy_action.setEnabled(False)
+
+        select_all_action = menu.addAction("Select All")
+        select_all_action.triggered.connect(self._select_all_text)
+
+        menu.addSeparator()
+
+        copy_markdown_action = menu.addAction("Copy all as Markdown")
+        copy_markdown_action.triggered.connect(self.copy_as_markdown)
+
+        copy_all_html_action = menu.addAction("Copy all as Html")
+        copy_all_html_action.triggered.connect(
+            lambda: pyperclip.copy(self.message_label.text())
+        )
+
+        menu.setStyleSheet(self.style_provider.get_context_menu_style())
+
+        menu.exec_(self.message_label.mapToGlobal(position))
+
+    def _select_all_text(self):
+        """Select all text in the message label."""
+        try:
+            html_content = self.message_label.text()
+            if html_content:
+                doc = QTextDocument()
+                doc.setHtml(html_content)
+                plain_text = doc.toPlainText()
+
+                self.message_label.setSelection(0, len(plain_text))
+        except Exception:
+            # Silent error handling
+            pass
+
+    def _copy_selected_text(self):
+        """Copy selected text as plain text."""
+        try:
+            selected_text = self.message_label.selectedText()
+            if selected_text:
+                pyperclip.copy(selected_text)
+        except Exception:
+            pass
+
+    def _copy_selected_html(self):
+        """Copy selected text with HTML formatting preserved."""
+        try:
+            if not self.message_label.hasSelectedText():
+                return
+
+            start = self.message_label.selectionStart()
+            selected_plain_text = self.message_label.selectedText()
+
+            if start >= 0 and selected_plain_text:
+                html_content = self.message_label.text()
+
+                doc = QTextDocument()
+                doc.setHtml(html_content)
+
+                # Create cursor and set selection based on plain text positions
+                cursor = QTextCursor(doc)
+                cursor.setPosition(start)
+                cursor.setPosition(
+                    start + len(selected_plain_text), QTextCursor.MoveMode.KeepAnchor
+                )
+
+                fragment = cursor.selection()
+                selected_html = fragment.toHtml()
+
+                pyperclip.copy(selected_html)
+        except Exception:
+            try:
+                selected_text = self.message_label.selectedText()
+                if selected_text:
+                    pyperclip.copy(selected_text)
+            except Exception:
+                pass
+
+    def copy_as_markdown(self):
+        """Copy the raw markdown text to clipboard."""
+        try:
+            if hasattr(self, "raw_text") and self.raw_text:
+                pyperclip.copy(self.raw_text)
+        except Exception:
+            # Silent error handling as requested
+            pass
 
     def set_text(self, text):
         """Set or update the text content of the message."""
