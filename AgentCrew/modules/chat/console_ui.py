@@ -476,12 +476,14 @@ class ConsoleUI(Observer):
                     confirmation_id, {"action": "approve_all"}
                 )
                 approved_text = Text(
-                    f"✓ Approved all future calls to '{tool_use['name']}' for this session.", style=RICH_STYLE_YELLOW
+                    f"✓ Approved all future calls to '{tool_use['name']}' for this session.",
+                    style=RICH_STYLE_YELLOW,
                 )
                 self.console.print(approved_text)
                 break
             elif response in ["f", "forever"]:
                 from AgentCrew.modules.config import ConfigManagement
+
                 config_manager = ConfigManagement()
                 config_manager.write_auto_approval_tools(tool_use["name"], add=True)
 
@@ -489,7 +491,8 @@ class ConsoleUI(Observer):
                     confirmation_id, {"action": "approve_all"}
                 )
                 saved_text = Text(
-                    f"✓ Tool '{tool_use['name']}' will be auto-approved forever.", style=RICH_STYLE_YELLOW
+                    f"✓ Tool '{tool_use['name']}' will be auto-approved forever.",
+                    style=RICH_STYLE_YELLOW,
                 )
                 self.console.print(saved_text)
                 break
@@ -887,6 +890,7 @@ class ConsoleUI(Observer):
                 self._current_prompt_session = session
 
                 # Create a dynamic prompt that includes agent and model info using HTML formatting
+
                 prompt_text = HTML("<ansiblue>👤 YOU:</ansiblue> ")
 
                 user_input = session.prompt(prompt_text)
@@ -997,6 +1001,7 @@ class ConsoleUI(Observer):
             self.console.print(title)
             self._start_input_thread()
         else:
+            time.sleep(0.2)  # prevent conflict
             self._print_prompt_prefix()
 
         # Wait for input while allowing events to be processed
@@ -1311,6 +1316,7 @@ class ConsoleUI(Observer):
 
                     # Handle help command directly
                     if user_input.strip() == "/help":
+                        self.console.print("\n")
                         self.print_welcome_message()
                         continue
 

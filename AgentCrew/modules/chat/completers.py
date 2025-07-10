@@ -234,6 +234,7 @@ class DirectoryListingCompleter(Completer):
                 path_document, complete_event
             ):
                 # Yield the completions
+                completion.text = completion.text.replace(" ", "\\ ")
                 yield completion
 
     def get_path_completions(self, path):

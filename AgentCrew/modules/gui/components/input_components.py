@@ -169,7 +169,7 @@ class InputComponents:
         text = self.chat_window.message_input.toPlainText()
         position = cursor.position()
 
-        if text.startswith("/"):
+        if text.startswith("/") and not text.startswith("/file "):
             self.insert_command_completion(completion)
             return
         # Find the start of the path
@@ -188,7 +188,7 @@ class InputComponents:
             cursor.setPosition(prefix_start)
             cursor.setPosition(position, QTextCursor.MoveMode.KeepAnchor)
 
-            cursor.insertText(completion)
+            cursor.insertText(completion.replace(" ", "\\ "))
 
     def browse_file(self):
         """Open file dialog and process selected file."""
@@ -205,7 +205,7 @@ class InputComponents:
                 self.chat_window.ui_state_manager.set_input_controls_enabled(False)
 
                 # Process the file using the /file command
-                file_command = f"/file {file_path}"
+                file_command = f'/file "{file_path}"'
                 self.chat_window.display_status_message(f"Processing file: {file_path}")
 
                 # Send the file command to the worker thread

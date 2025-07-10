@@ -9,6 +9,7 @@ from AgentCrew.modules.llm.service_manager import ServiceManager
 from AgentCrew.modules.chat.consolidation import ConversationConsolidator
 from AgentCrew.modules.config import ConfigManagement
 from AgentCrew.modules.mcpclient import MCPService
+import shlex
 
 
 @dataclass
@@ -443,7 +444,7 @@ class CommandProcessor:
         file_paths_str: str = user_input[6:].strip()
         file_paths: List[str] = [
             os.path.expanduser(path.strip())
-            for path in file_paths_str.split()
+            for path in shlex.split(file_paths_str)
             if path.strip()
         ]
 
