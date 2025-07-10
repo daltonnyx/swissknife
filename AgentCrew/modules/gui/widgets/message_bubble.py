@@ -2,6 +2,8 @@ from typing import Optional
 import markdown
 import os
 import mimetypes
+import re
+import html
 
 from PySide6.QtWidgets import (
     QVBoxLayout,
@@ -11,6 +13,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QFileIconProvider,
     QScrollArea,
+    QApplication,
     QMenu,
 )
 from PySide6.QtCore import Qt, QFileInfo, QByteArray, QTimer
@@ -113,11 +116,14 @@ class MessageBubble(QFrame):
         self.message_label = QLabel()
         self.message_label.setTextFormat(Qt.TextFormat.RichText)
         self.message_label.setWordWrap(True)
-        self.message_label.setOpenExternalLinks(True)  # Allow clicking links
+        self.message_label.setOpenExternalLinks(False)  # Don't open links externally - use our custom handler
         self.message_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
             | Qt.TextInteractionFlag.LinksAccessibleByMouse
         )
+
+        # Connect linkActivated signal to handle copy button clicks
+        self.message_label.linkActivated.connect(self._handle_link_activated)
 
         font = self.message_label.font()
         font.setPixelSize(16)
@@ -176,6 +182,9 @@ class MessageBubble(QFrame):
             rollback_button.hide()
             self.rollback_button = rollback_button
 
+        # Remove copy button functionality - no longer needed
+        self.copy_button = None
+
         if not self.is_consolidated:
             # Create consolidated button with icon only
             consolidated_icon = qta.icon("fa6s.wand-magic-sparkles", color="white")
@@ -206,25 +215,23 @@ class MessageBubble(QFrame):
                 button_width = 30
                 button_height = 30
                 spacing = 5
+                current_x = self.width() - button_width - 5  # Start from rightmost position
 
-                is_has_consolidate = False
+                # Position consolidated button first (rightmost)
                 if self.consolidated_button:
-                    # Position consolidated button first (rightmost)
                     self.consolidated_button.setGeometry(
-                        self.width() - button_width - 5,
+                        current_x,
                         5,
                         button_width,
                         button_height,
                     )
                     self.consolidated_button.show()
-                    is_has_consolidate = True
+                    current_x -= (button_width + spacing)  # Move left for next button
 
+                # Position rollback button (leftmost)
                 if self.rollback_button:
-                    # Position rollback button to the left of consolidated button
                     self.rollback_button.setGeometry(
-                        self.width() - (button_width * 2) - spacing - 5
-                        if is_has_consolidate
-                        else self.width() - button_width - 5,
+                        current_x,
                         5,
                         button_width,
                         button_height,
@@ -252,23 +259,28 @@ class MessageBubble(QFrame):
             button_width = 30
             button_height = 30
             spacing = 5
+            current_x = self.width() - button_width - 5  # Start from rightmost position
+
+            # Position consolidated button first (rightmost)
             if hasattr(self, "consolidated_button") and self.consolidated_button:
-                # Position consolidated button first (rightmost)
                 self.consolidated_button.setGeometry(
-                    self.width() - button_width - 5,
+                    current_x,
                     5,
                     button_width,
                     button_height,
                 )
+                current_x -= (button_width + spacing)  # Move left for next button
 
+
+
+            # Position rollback button (leftmost)
             if (
                 hasattr(self, "rollback_button")
                 and self.rollback_button
                 and self.rollback_button.isVisible()
             ):
-                # Position rollback button to the left of consolidated button
                 self.rollback_button.setGeometry(
-                    self.width() - (button_width * 2) - spacing - 5,
+                    current_x,
                     5,
                     button_width,
                     button_height,
@@ -277,6 +289,117 @@ class MessageBubble(QFrame):
                 original_resize_event(event)
 
         self.resizeEvent = resize_event_wrapper
+
+    def _inject_copy_buttons_to_code_blocks(self, html_content):
+        """Inject copy buttons into code blocks for assistant messages."""
+        if self.is_user or self.is_thinking or self.is_consolidated:
+            return html_content
+
+        # Store code blocks for copy functionality
+        self.code_blocks = {}
+
+        # Pattern to match code blocks (both plain and codehilite wrapped)
+        # This matches both <pre><code>...</code></pre> and <div class="codehilite"><pre><span></span><code>...</code></pre></div>
+        code_block_pattern = r'(?:<div[^>]*class="codehilite"[^>]*>)?<pre[^>]*>(?:<span[^>]*></span>)?<code[^>]*>(.*?)</code></pre>(?:</div>)?'
+
+        def replace_code_block(match):
+            full_match = match.group(0)
+            code_content = match.group(1)
+
+            # Create a unique ID for this code block
+            block_id = f"code_block_{len(self.code_blocks)}"
+
+            # Decode HTML entities to get the raw code
+            raw_code = html.unescape(code_content)
+            # Remove HTML tags if any (spans from syntax highlighting)
+            raw_code = re.sub(r'<[^>]+>', '', raw_code)
+
+            # Store the raw code for copying
+            self.code_blocks[block_id] = raw_code
+
+            # Create the copy button HTML using only Qt-supported CSS   properties
+            copy_button_html = f'''
+            <div
+                style="font-size: 12px;font-family: monospace;"
+            >
+                <a href="copy:{block_id}" style="text-decoration: none;">📋</a>
+            </div>
+            '''
+
+            # Check if this is a codehilite block
+            #   (has div wrapper)
+            if 'class="codehilite"' in full_match:
+                # Extract just the code content and build new structure
+                code_start = full_match[full_match.find('<code'):full_match.find('>')+1]
+
+                # Create structure with copy button floated right
+                return f'''<div style="margin: 8px 0; overflow: hidden;">
+                    {copy_button_html}
+                    <div class="codehilite"><pre style="margin: 0; padding: 16px; border-radius: 6px; overflow-x: auto;">{code_start}{code_content}</code></pre></div>
+                </div>'''
+            else:
+                # Plain code block - use float layout with supported properties
+                code_start = full_match[full_match.find('<code'):full_match.find('>')+1]
+                return f'''<div style="margin: 8px 0; overflow: hidden;">
+                    {copy_button_html}
+                    <pre style="margin: 0; padding: 16px; border-radius: 6px; overflow-x: auto; background-color: #2d3748; color: #e2e8f0;">{code_start}{code_content}</code></pre>
+                </div>'''
+
+        # Replace all code blocks with ones that include copy buttons
+        modified_html = re.sub(code_block_pattern, replace_code_block, html_content, flags=re.DOTALL)
+
+        return modified_html
+
+    def _handle_link_activated(self, url):
+        """Handle clicks on copy buttons within code blocks and external links."""
+        if url.startswith("copy:"):
+            # Handle copy button clicks
+            block_id = url[5:]  # Remove "copy:" prefix
+            if block_id in self.code_blocks:
+                code_content = self.code_blocks[block_id]
+                clipboard = QApplication.clipboard()
+                clipboard.setText(code_content)
+
+                # Provide visual feedback
+                self._show_copy_feedback(len(code_content))
+        else:
+            # Handle external links by opening them in the default browser
+            from PySide6.QtGui import QDesktopServices
+            from PySide6.QtCore import QUrl
+            QDesktopServices.openUrl(QUrl(url))
+
+    def _show_copy_feedback(self, char_count):
+        """Show visual feedback when code is copied."""
+        # Create a temporary status message
+        if hasattr(self, 'copy_feedback_label'):
+            self.copy_feedback_label.deleteLater()
+
+        feedback_label = QLabel(f"✓ Copied to clipboard")
+        feedback_label.setStyleSheet("""
+            QLabel {
+                background-color: rgba(52, 168, 83, 0.9);
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+        """)
+        feedback_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Position the feedback label
+        feedback_label.setParent(self)
+        feedback_label.resize(feedback_label.sizeHint())
+        feedback_label.move(
+            (self.width() - feedback_label.width()) // 2,
+            self.height() - feedback_label.height() - 10
+        )
+        feedback_label.show()
+
+        self.copy_feedback_label = feedback_label
+
+        # Remove the feedback after 2 seconds
+        QTimer.singleShot(2000, lambda: feedback_label.deleteLater() if feedback_label else None)
 
     def show_context_menu(self, position):
         """Create and show context menu with standard text actions plus Copy as Markdown."""
@@ -389,6 +512,10 @@ class MessageBubble(QFrame):
                     "sane_lists",
                 ],
             )
+
+            # Inject copy buttons into code blocks for assistant messages
+            html_content = self._inject_copy_buttons_to_code_blocks(html_content)
+
             html_content = (
                 f"""<style>
                 * {{line-height: 1.5}}
@@ -465,12 +592,16 @@ class MessageBubble(QFrame):
             Qt.TextInteractionFlag.TextSelectableByMouse
             | Qt.TextInteractionFlag.LinksAccessibleByMouse
         )
+        # Reconnect link activation handler after streaming finalization
+        self.message_label.linkActivated.connect(self._handle_link_activated)
         self.set_text(self.raw_text_buffer)
 
     def stop_streaming(self):
         """Force stop streaming and finalize immediately."""
         if self.is_streaming:
             self._finalize_streaming()
+
+
 
     def _ensure_visible(self):
         """Ensure the latest content is visible by scrolling."""

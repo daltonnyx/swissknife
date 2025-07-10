@@ -151,7 +151,7 @@ QPushButton {
     background-color: #4285f4; /* Blue */
     color: #ffffff; /* White text */
     border: none;
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 8px;
     font-weight: bold;
 }
@@ -172,7 +172,7 @@ QPushButton {
     background-color: #a0a0a0; /* Light gray */
     color: #ffffff; /* Dark gray text */
     border: none;
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 8px;
     font-weight: bold;
 }
@@ -193,7 +193,7 @@ QPushButton {
     background-color: #ea4335; /* Red */
     color: #ffffff; /* White text */
     border: none;
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 8px;
     font-weight: bold;
 }
@@ -295,7 +295,7 @@ QPushButton {
     background-color: #e0e0e0; /* Light gray */
     color: #999999; /* Gray text */
     border: none;
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 8px;
     font-weight: bold;
 }
@@ -306,7 +306,7 @@ QPushButton {
     background-color: #cccccc; /* Light gray */
     color: #666666; /* Darker gray text */
     border: none;
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 8px;
     font-weight: bold;
 }
@@ -486,7 +486,7 @@ QMenu::separator {
 QLabel {
     background-color: #ffffff; /* White */
     color: #333333; /* Dark gray text */
-    padding: 8px; 
+    padding: 8px;
     border-radius: 5px;
     font-weight: bold;
 }
@@ -570,8 +570,8 @@ background-color: #f0f0f0; /* Very light gray */
 
     # Message bubble styles
     USER_BUBBLE = """
-QFrame { 
-    border-radius: 5px; 
+QFrame {
+    border-radius: 5px;
     background-color: #4285f4; /* Blue */
     border: none;
     padding: 2px;
@@ -582,8 +582,8 @@ QLabel {
 """
 
     ASSISTANT_BUBBLE = """
-QFrame { 
-    border-radius: 5px; 
+QFrame {
+    border-radius: 5px;
     background-color: #ffffff; /* White */
     border: 1px solid #e0e0e0; /* Light gray border */
     padding: 2px;
@@ -594,8 +594,8 @@ QLabel {
 """
 
     THINKING_BUBBLE = """
-QFrame { 
-    border-radius: 5px; 
+QFrame {
+    border-radius: 5px;
     background-color: #f8f8f8; /* Light gray */
     border: 1px solid #cccccc; /* Gray border */
     padding: 2px;
@@ -606,8 +606,8 @@ QLabel {
 """
 
     CONSOLIDATED_BUBBLE = """
-QFrame { 
-    border-radius: 5px; 
+QFrame {
+    border-radius: 5px;
     background-color: #ffffff; /* White */
     border: 1px solid #cccccc; /* Gray border */
     padding: 2px;
@@ -653,6 +653,8 @@ QPushButton:pressed {
     background-color: #4a148c; /* Even darker purple */
 }
 """
+
+
 
     # Tool dialog styles
     TOOL_DIALOG_TEXT_EDIT = """

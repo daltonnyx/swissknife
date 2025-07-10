@@ -161,7 +161,7 @@ QPushButton {
     background-color: #5e81ac; /* Nord Frost 3 */
     color: #eceff4; /* Nord Snow Storm 2 */
     border: none;
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 8px;
     font-weight: bold;
 }
@@ -182,7 +182,7 @@ QPushButton {
     background-color: #4c566a; /* Nord Polar Night 3 */
     color: #d8dee9; /* Nord Snow Storm 0 */
     border: none;
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 8px;
     font-weight: bold;
 }
@@ -203,7 +203,7 @@ QPushButton {
     background-color: #bf616a; /* Nord Aurora Red */
     color: #eceff4; /* Nord Snow Storm 2 */
     border: none;
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 8px;
     font-weight: bold;
 }
@@ -262,7 +262,7 @@ QGroupBox {
     background-color: #3b4252; /* Nord Polar Night 1 */
 }
 QLabel {
-    background-color: #3b4252; 
+    background-color: #3b4252;
 }
 """
 
@@ -305,7 +305,7 @@ QPushButton {
     background-color: #4c566a; /* Nord Polar Night 3 */
     color: #434c5e; /* Nord Polar Night 2 */
     border: none;
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 8px;
     font-weight: bold;
 }
@@ -316,7 +316,7 @@ QPushButton {
     background-color: #434c5e; /* Nord Polar Night 2 */
     color: #4c566a; /* Nord Polar Night 3 */
     border: none;
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 8px;
     font-weight: bold;
 }
@@ -496,7 +496,7 @@ QMenu::separator {
 QLabel {
     background-color: #434c5e; /* Nord Polar Night 2 */
     color: #e5e9f0; /* Nord Snow Storm 1 */
-    padding: 8px; 
+    padding: 8px;
     border-radius: 5px;
     font-weight: bold;
 }
@@ -580,8 +580,8 @@ background-color: #2e3440; /* Nord Polar Night 0 */
 
     # Message bubble styles
     USER_BUBBLE = """
-QFrame { 
-    border-radius: 5px; 
+QFrame {
+    border-radius: 5px;
     background-color: #5e81ac; /* Nord Frost 3 */
     border: none;
     padding: 2px;
@@ -589,8 +589,8 @@ QFrame {
 """
 
     ASSISTANT_BUBBLE = """
-QFrame { 
-    border-radius: 5px; 
+QFrame {
+    border-radius: 5px;
     background-color: #434c5e; /* Nord Polar Night 2 */
     border: none;
     padding: 2px;
@@ -598,8 +598,8 @@ QFrame {
 """
 
     THINKING_BUBBLE = """
-QFrame { 
-    border-radius: 5px; 
+QFrame {
+    border-radius: 5px;
     background-color: #4c566a; /* Nord Polar Night 3 */
     border: none;
     padding: 2px;
@@ -607,8 +607,8 @@ QFrame {
 """
 
     CONSOLIDATED_BUBBLE = """
-QFrame { 
-    border-radius: 5px; 
+QFrame {
+    border-radius: 5px;
     background-color: #434c5e; /* Nord Polar Night 2 */
     border: 1px solid #4c566a; /* Nord Polar Night 3 */
     padding: 2px;
@@ -654,6 +654,8 @@ QPushButton:pressed {
     background-color: #b48ead; /* Nord Aurora Purple (darker) */
 }
 """
+
+
 
     # Tool dialog styles
     TOOL_DIALOG_TEXT_EDIT = """
